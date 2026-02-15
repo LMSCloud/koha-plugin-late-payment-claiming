@@ -1,0 +1,75 @@
+[% USE KohaDates %]
+[% USE AuthorisedValues %]
+[% INCLUDE 'doc-head-open.inc' %]
+ <title>Koha: Late Payment Claiming Plugin: Konfiguration</title>
+[% INCLUDE 'doc-head-close.inc' %]
+<link rel="stylesheet" type="text/css" href="/api/v1/contrib/presseplus/static/css/latepaymentclaiming.css" />
+</head>
+<body>
+[% INCLUDE 'header.inc' %]
+[% INCLUDE 'cat-search.inc' %]
+
+<div id="breadcrumbs"><a href="/cgi-bin/koha/mainpage.pl">Start</a> &rsaquo; <a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a> &rsaquo; Gebührenmahnung &rsaquo; Konfiguration</div>
+
+    <div class="main container-fluid">
+        <div class="row">
+            <div class="col-sm-12">
+                <main>
+
+					<h1>Gebührenmahnung Plugin: Konfiguration</h1>
+
+					<!-- Notice our form here has no 'action', this is good, it means that our forms will always get passed back to 'plugins/run.pl'. You could hard code it instead if you prefer -->
+					<form method="get">
+
+						<fieldset class="rows">
+							<legend>Konfiguration</legend>
+
+							<ol>
+								<li>
+									<label class="radio" for="batch_active">Mahne Gebühren im Tageslauf:</label>
+									<label for="batch_active">
+										[% IF batch_active %]
+											<input type="radio" id="batch_active" name="batch_active" value="1" checked="checked" /> Ja
+										[% ELSE %]
+											<input type="radio" id="batch_active" name="batch_active" value="1" />
+										[% END %]
+										Ja
+									</label>
+									<label for="no_batch_active">
+										[% IF batch_active %]
+											<input type="radio" id="no_batch_active" name="batch_active" value="0" />
+										[% ELSE %]
+											<input type="radio" id="no_batch_active" name="batch_active" value="0" checked="checked" />
+										[% END %]
+										Nein
+									</label>
+									<span class="hint">Sollen Gebühren automatisch im Tageslauf gemahnt werden?</span>
+								</li>
+							</ol>
+						</fieldset>
+
+						<fieldset class="action">
+							<input type="hidden" name="save" value="1" />
+							<input type="hidden" name="class" value="[% CLASS | html %]"/>
+							<input type="hidden" name="method" value="[% METHOD | html %]"/>
+
+							<input type="submit" value="Konfiguration speichern" />
+						</fieldset>
+					</form>
+
+					<hr/>
+
+					<p>
+						<h5>Aktualisierungsstatus des Plugins:</h5>
+						[% IF last_upgraded %]
+							Das Plugin wurde zuletzt aktualisert am [% last_upgraded | $KohaDates with_hours => 1 %]
+						[% ELSE %]
+							Das Plugin wurde noch nicht aktualisiert.
+						[% END %]
+					</p>
+                </main>
+            </div>
+        </div>
+    </div>
+
+[% INCLUDE 'intranet-bottom.inc' %]

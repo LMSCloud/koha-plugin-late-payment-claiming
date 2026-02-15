@@ -1,0 +1,17 @@
+fieldset.rows ol.radio label.radio,
+fieldset.rows label
+{
+     width: 15%;
+}
+
+fieldset.rows {
+    padding: 1em;
+}
+
+.journalNotFound {
+    display: none;
+}
+
+.noJournalListAvailable {
+    display: none;
+}
