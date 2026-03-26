@@ -1,0 +1,491 @@
+[% USE raw %]
+[% USE Asset %]
+[% USE KohaDates %]
+[% USE AuthorisedValues %]
+[% USE Categories %]
+[% USE Branches %]
+[% USE JSON.Escape %]
+[% USE Koha %]
+[% SET footerjs = 1 %]
+[% SET libraries = Branches.all %]
+[% SET categories = Categories.all.unblessed %]
+
+[% PROCESS 'patron-search.inc' %]
+
+[% INCLUDE 'doc-head-open.inc' %]
+ <title>Koha: Gebührenmahnung Plugin: Gebührenmahnhistorie</title>
+[% INCLUDE 'doc-head-close.inc' %]
+<link rel="stylesheet" type="text/css" href="/api/v1/contrib/latepaymentclaiming/static/css/latepaymentclaiming.css" />
+</head>
+<body id="latePaymentClaimsTool">
+[% INCLUDE 'html_helpers.inc' %]
+[% INCLUDE 'cat-search.inc' %]
+
+
+[% WRAPPER 'sub-header.inc' %]
+    [% WRAPPER breadcrumbs %]
+        [% WRAPPER breadcrumb_item %]
+            <a href="/cgi-bin/koha/tools/tools-home.pl">Werkzeuge</a>
+        [% END %]
+        [% IF action == 'list' %]
+            [% WRAPPER breadcrumb_item %]
+                <a href="/cgi-bin/koha/plugins/run.pl?class=Koha%3A%3APlugin%3A%3ACom%3A%3ALMSCloud%3A%3ALatePaymentClaiming&method=tool">Werkzeuge für Gebührenmahnvorgänge</a>
+            [% END %]
+            [% WRAPPER breadcrumb_item bc_active= 1 %]
+                <span>Gebührenmahnhistorie</span>
+            [% END %]
+        [% ELSE %]
+            [% WRAPPER breadcrumb_item bc_active= 1 %]
+                <span>Werkzeuge für Gebührenmahnvorgänge</span>
+            [% END %]
+        [% END %]
+    [% END #/ WRAPPER breadcrumbs %]
+[% END #/ WRAPPER sub-header.inc %]
+
+
+<div class="main container-fluid">
+    <div class="row">
+        <div class="col-sm-12">
+            <main>
+                [% IF (!action  || action != 'list') %]
+                    <h1>Werkzeuge für Gebührenmahnvorgänge</h1>
+                    <br>
+                    <br>
+                    
+                    <dl>
+                        <dt><a href="/cgi-bin/koha/plugins/run.pl?class=Koha%3A%3APlugin%3A%3ACom%3A%3ALMSCloud%3A%3ALatePaymentClaiming&method=tool&toolaction=currentClaims">Mahnfälle</a></dt>
+                        <dd>
+                             Alle Gebührenmahnfälle auflisten.
+                             Mahnfälle beenden oder ergänzen.
+                        </dd>
+                    </dl>
+                    
+                    <dl>
+                        <dt><a href="/cgi-bin/koha/plugins/run.pl?class=Koha%3A%3APlugin%3A%3ACom%3A%3ALMSCloud%3A%3ALatePaymentClaiming&method=tool&toolaction=claimHistory">Gebührenmahnhistorie</a></dt>
+                        <dd>
+                             Mit diese Funktion werden bisher erfolgte Gebührenmahnvorgänge aufgelistet.
+                             Die Gebührenmahnhistorie kann gzielt gefiltert werden.
+                        </dd>
+                    </dl>
+                        
+                        
+                    
+                [% ELSIF action == 'list' %]
+                    <h1>Gebührenmahnhistorie</h1>
+
+                    <table id="latePaymentClaimHistory" class="table table-striped dt-responsive">
+                        <thead>
+                            <tr>
+                                <th class="latepaypemnt_claim_list_rightcol" style="white-space: nowrap;">Zeitpunkt</th>
+                                <th>Mahnfall</th>
+                                <th>Ausweisnummer</th>
+                                <th>Benutzer</th>
+                                <th>Auswahl Bibliothek</th>
+                                <th>Auswahl Kate&shy;gorie</th>
+                                <th>Auswahl Vorgang</th>
+                                <th>Mahn&shy;stufe</th>
+                                <th>Notiz</th>
+                                <th>Gebüh&shy;ren&shy;stand</th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                            <tr>
+                                <th>Zeit&shy;punkt</th>
+                                <th>Mahn&shy;fall</th>
+                                <th>Aus&shy;weis&shy;num&shy;mer</th>
+                                <th>Benut&shy;zer</th>
+                                <th>Biblio&shy;thek</th>
+                                <th>Kate&shy;go&shy;rie</th>
+                                <th>Vor&shy;gang</th>
+                                <th>Mahn&shy;stufe</th>
+                                <th>Notiz</th>
+                                <th>Gebühren&shy;stand</th>
+                                <th>Selektion</th>
+                                <th>Aktion(en)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                [% END %]
+            </main>
+        </div>
+    </div>
+</div>
+
+<!-- Show selection details -->
+<div class="modal" id="show_selections" tabindex="-1" role="dialog" aria-labelledby="show_selections_details_title">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="show_selections_details_title">Selektionen</h4>
+            </div>
+            <div class="modal-body">
+                <legend id="show_selection_details_legend">Selektionen des Mahnfalls:</legend>
+                <div id="showSelectionsDetail">
+                
+                </div>
+            </div> <!-- /.modal-body -->
+            <div class="modal-footer">
+                <form id="show_selections_actions">
+                    <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                </form>
+            </div> <!-- /.modal-footer -->
+        </div> <!-- /.modal-content -->
+    </div> <!-- /.modal-dialog -->
+</div> <!-- /.modal -->
+
+<!-- Show ban action details -->
+<div class="modal" id="show_banactions" tabindex="-1" role="dialog" aria-labelledby="show_banactions_details_title">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="show_banactions_details_title">Aktionen</h4>
+            </div>
+            <div class="modal-body">
+                <legend id="show_banactions_details_legend">Duchgeführte Aktionen bei Erreichen der Mahnstufe:</legend>
+                <div id="showBanactionsDetail">
+                
+                </div>
+            </div> <!-- /.modal-body -->
+            <div class="modal-footer">
+                <form id="show_selections_actions">
+                    <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                </form>
+            </div> <!-- /.modal-footer -->
+        </div> <!-- /.modal-content -->
+    </div> <!-- /.modal-dialog -->
+</div> <!-- /.modal -->
+
+[% MACRO jsinclude BLOCK %]
+    [% INCLUDE 'calendar.inc' %]
+    [% INCLUDE 'datatables.inc' %]
+    [% INCLUDE 'select2.inc' %]
+    [% Asset.js("lib/jquery/plugins/jquery.dataTables.columnFilter.js") | $raw %]
+    <script>
+    
+    
+        [% IF action == 'list' %]
+        
+            function fnCreateDateRangeInput(oTable) {
+                // console.log("fnCreateDateRangeInput",oTable);
+                var th = $('#latePaymentClaimsHitory thead tr:nth-child(2) th:nth-child(6)');
+                th.html('<span id="addFromFlatPickr">Von</span> <input type="text" class="date_range_filter flatpickr" id="latePaymentClaimHistory_range_from_4" rel="4" size="10"><br>' + 
+                        '<span id="toFromFlatPickr">bis</span> <input type="text" class="date_range_filter flatpickr" id="latePaymentClaimHistory_range_to_4" rel="4" size="10">');
+                flatpickr("#latePaymentClaimHistory_range_from_4", {  });
+                flatpickr("#latePaymentClaimHistory_range_to_4", {  });
+            }
+            
+            function fnCreateDateRangeInput(oTable) {
+                var th = $('#latePaymentClaimHistory thead tr:nth-child(2) th:nth-child(1)');
+                th.html('<span id="addFromFlatPickr">Von</span> <input type="text" class="date_range_filter flatpickr" id="latePaymentClaimHistory_range_from_1" rel="4" size="10"><br>' + 
+                        '<span id="toFromFlatPickr">bis</span> <input type="text" class="date_range_filter flatpickr" id="latePaymentClaimHistory_range_to_1" rel="4" size="10">');
+                flatpickr("#latePaymentClaimHistory_range_from_1", {  });
+                flatpickr("#latePaymentClaimHistory_range_to_1", {  });
+            }
+            
+            var claimList;
+            $(document).ready(function() {
+                claimList = $("#latePaymentClaimHistory").dataTable($.extend(true, {}, dataTablesDefaults, {
+                    'serverSide': true,
+                    'deferRender': true,
+                    'paging': true,
+                    'pageLength': 20,
+                    'lengthMenu': [[10, 20, 50, 100, -1], [10, 20, 50, 100, __('Alle')]],
+                    'pagingType': 'full_numbers',
+                    'processing': true,
+                    'fixedHeader': true,
+                    'columns': [
+                        { 
+                            name: 'action_timestamp',
+                            data: 'action_timestamp',
+                            sWidth: "10%",
+                            render: function( data, type, row, meta ) {
+                                return data ? escape_str($datetime(data)) : "";
+                            }
+                        },
+                        { 
+                            'name': 'claim_id',
+                            'data': 'claim_id',
+                            'sWidth': "5%",
+                            'render': function ( data, type, row, meta ) {
+                               return data ? escape_str(data) : "";
+                            }
+                        },
+                        { 
+                            'name': 'cardnumber',
+                            'data': 'cardnumber',
+                            'sWidth': "10%",
+                            'render': function ( data, type, row, meta ) {
+                                 let patron_id = encodeURIComponent(row.patron_id);
+                                 return "<a href=\"/cgi-bin/koha/circ/circulation.pl?borrowernumber=" + patron_id + "\" title=\"Check out\" class=\"patron_name\" data-borrowernumber=\"" + patron_id + "\" style=\"white-space:pre-wrap;word-break:break-all;hyphens:auto;overflow-wrap:break-word;\">" + escape_str(data) + "</a>";
+                             }         
+                        },
+                        {
+                            'name': 'surname',
+                            'data': 'patron',
+                            'sWidth': "15%",
+                             render: function ( data, type, row, meta ) {
+                                 let patron_id = encodeURIComponent(row.patron_id);
+                                 let r = "<a href=\"/cgi-bin/koha/members/moremember.pl?borrowernumber=" + patron_id + "\" class=\"patron_name\" data-borrowernumber=\"" + patron_id + "\" style=\"white-space:pre-wrap;word-break:break-all;hyphens:auto;overflow-wrap:break-word;\">" + $patron_to_html(row, { invert_name: 1 }) + "</a>";
+                                 return r;
+                             }
+                        },
+                        { 
+                            name: 'library_id',
+                            data: 'library_id',
+                            sWidth: "10%",
+                            render: function( data, type, row, meta ) {
+                                let library_name = libraries_map[data].branchname
+                                if( !singleBranchMode && data == logged_in_library_id ) {
+                                    return "<span class=\"currentlibrary\">" + escape_str(library_name) + "</span>";
+                                } else {
+                                    return escape_str(library_name);
+                                }
+                            }
+                        },
+                        {
+                            name: 'category_id',
+                            data: 'category_id',
+                            sWidth: "10%",
+                            render: function( data, type, row, meta ) {
+                                return escape_str(categories_map[data.toLowerCase()].description);
+                            }
+                        },
+                        { 
+                            name: 'action',
+                            data: 'action',
+                            sWidth: "5%",
+                            "render": function( data, type, row, meta ) {
+                                var actionName;
+                                switch (data) {
+                                    case "claimed":   actionName = row.level + ". Mahnung"; break;
+                                    case "comment": actionName = "Kommentiert"; break;
+                                    case "pause":   actionName = "Pausiert"; break;
+                                    case "close":   actionName = "Abgeschlossen"; break;
+                                    case "reopen":  actionName = "Reaktiviert"; break;
+                                    case "paid":    actionName = "Gebühr beglichen"; break;
+                                    case "added":    actionName = "Mahnfall erfasst"; break;
+                                    default: actionName = data;
+                                }
+                                return escape_str(actionName);
+                            }
+                        },
+                           { 
+                                name: 'action_level',
+                                data: 'action_level',
+                                sWidth: "5%",
+                                render: function( data, type, row, meta ) {
+                                    return escape_str(data);
+                                }
+                            },
+                            { 
+                                name: 'action_comment',
+                                data: 'action_comment',
+                                sWidth: "15%",
+                                render: function( data, type, row, meta ) {
+                                    return escape_str(data);
+                                }
+                            },
+                            { 
+                                name: 'action_account_balance',
+                                data: 'action_account_balance',
+                                sWidth: "5%",
+                                "render": function( data, type, row, meta ) {
+                                    let r = '';
+                                    let balance_str = row.action_account_balance || 0;
+                                    balance_str = balance_str.escapeHtml().format_price();
+                                    if ( row.action_account_balance < 0 ) {
+                                        // FIXME Format price here
+                                        r += "<span class='credit'>" + balance_str + "</span>";
+                                    } else if ( row.action_account_balance > 0 ) {
+                                        r += "<span class='debit'><strong>" + balance_str  + "</strong></span>"
+                                    } else {
+                                        r += balance_str;
+                                    }
+                                    return r;
+                                }
+                            },
+                            { 
+                                name: 'patron_selections_description',
+                                data: 'patron_selections_description',
+                                sWidth: "5%",
+                                orderable: false,
+                                "render": function( data, type, row, meta ) {
+                                    var selections='';
+                                    if ( data.length > 0 ) {
+                                        selections += '<div class="show_patron_selection_details">' +
+                                                      '<a class="btn btn-default btn-xs"><i class="fa fa-eye"></i> Anzeigen</a>';
+                                        selections += '<div  class="latepayment_userselection_list" style="display:none"><ul>';
+                                        for (var i=0; i < data.length; i++) {
+                                            selections += '<li>' + escape_str(data[i]) + '</li>';
+                                        }
+                                        selections += '</ul></div></div>';
+                                    }
+                                    return selections;
+                                }
+                            },
+                            { 
+                                name: 'ban_actions_description',
+                                data: 'ban_actions_description',
+                                sWidth: "5%",
+                                orderable: false,
+                                "render": function( data, type, row, meta ) {
+                                    var selections='';
+                                    if ( data.length > 0 ) {
+                                        selections += '<div class="show_ban_action_details">' +
+                                                      '<a class="btn btn-default btn-xs"><i class="fa fa-eye"></i> Anzeigen</a>';
+                                        selections += '<div  class="latepayment_banaction_list" style="display:none"><ul>';
+                                        for (var i=0; i < data.length; i++) {
+                                            selections += '<li>' + escape_str(data[i]) + '</li>';
+                                        }
+                                        selections += '</ul></div></div>';
+                                    }
+                                    return selections;
+                                }
+                            }
+                    ],
+                    "buttons": [{
+                        fade: 100,
+                        className: "dt_button_clear_filter",
+                        titleAttr: __('Suche leeren'),
+                        enabled: false,
+                        text: '<i class="fa fa-lg fa-remove"></i> <span class="dt-button-text">' + __('Suche leeren') + '</span>',
+                        action: function ( e, dt, node ) {
+                            dt.search( "" ).draw("page");
+                            node.addClass("disabled");
+                        }
+                    }],
+                    "order": [[ 0, "desc" ]],
+                    "oLanguage": {
+                        "sSearch":         "Suchen: ",
+                        "sEmptyTable":     "Keine Gebührenmahnvorgänge gefunden",
+                        "sInfo":           "Zeige _START_ bis _END_ von _TOTAL_ Gebührenmahnvorgängen",
+                        "sInfoEmpty":      "Zeige 0 bis 0 von 0 Gebührenmahnvorgängen",
+                        "sInfoFiltered":   "(gefiltert von _MAX_ Gebührenmahnvorgänge gesamt)",
+                        "sLengthMenu":     "Zeige _MENU_ Gebührenmahnvorgänge",
+                        "oPaginate": {
+                            "sFirst":      "Erste",
+                            "sLast":       "Letzte",
+                            "sNext":       "Nächste",
+                            "sPrevious":   "Vorige"
+                        },
+                    },
+                    "ajax": '/api/v1/contrib/latepaymentclaiming/late_payment_claim_history',
+                    "sAjaxSource": '/api/v1/contrib/latepaymentclaiming/late_payment_claim_history',
+                    drawCallback: function (settings) {
+                        $('.show_patron_selection_details a').click(function() {
+                            $('#showSelectionsDetail').html('<ul>'+$(this).parent().find('ul').html()+'</ul>');
+                            var modal = $("#show_selections");
+                            modal.modal("show");
+                        });
+                        $('.show_ban_action_details a').click(function() {
+                            $('#showBanactionsDetail').html('<ul>'+$(this).parent().find('ul').html()+'</ul>');
+                            var modal = $("#show_banactions");
+                            modal.modal("show");
+                        } );
+                    },
+                    "fnServerData": function(sSource, params, fnCallback) {
+                        console.log(params);
+                        let readParams = {};
+                        for (let i=0;i<params.length;i++) {
+                            readParams[params[i].name] = params[i].value;
+                        }
+                        let searchParams = { 
+                           '_per_page': readParams['iDisplayLength'],
+                           '_page': (readParams['iDisplayStart'] / readParams['iDisplayLength']) + 1,
+                           'draw': readParams['sEcho']
+                        };
+                        for (let i=0;i<readParams['iColumns'];i++) {
+                            var field = readParams['mDataProp_' + i];
+                            if ( field == 'library_id' ) field = 'library';
+                            else if ( field == 'category_id' ) field = 'category';
+                            if ( field.length > 0 && readParams['sSearch_' + i].length > 0 ) {
+                                if (  field != "action_timestamp" && field != 'action_account_balance' ) {
+                                    searchParams[field] = readParams['sSearch_' + i];
+                                }
+                                else if ( field == 'action_account_balance' ) {
+                                    var amounts = readParams['sSearch_' + i].split('~');
+                                    if ( amounts[0] && amounts[0].length > 0 ) {
+                                        searchParams['action_account_balance_from'] = amounts[0];
+                                    }
+                                    if ( amounts[1] && amounts[1].length > 0 ) {
+                                        searchParams['action_account_balance_to'] = amounts[1];
+                                    }
+                                }
+                            }
+                        }
+                        if ( $("#latePaymentClaimHistory_range_from_1").val() && $("#latePaymentClaimHistory_range_from_1").val().length > 0 ) {
+                            searchParams['action_timestamp_from'] = $("#latePaymentClaimHistory_range_from_1").val();
+                        }
+                        if ( $("#latePaymentClaimHistory_range_to_1").val() && $("#latePaymentClaimHistory_range_to_1").val().length > 0 ) {
+                            searchParams['action_timestamp_to'] = $("#latePaymentClaimHistory_range_to_1").val();
+                        }
+                        let sortFields = [];
+                        for (let i=0;i<readParams['iSortingCols'];i++) {
+                            var field = readParams['mDataProp_' + readParams['iSortCol_' + i]];
+                            var direction = readParams['sSortDir_' + i];
+                            if ( field == 'library_id' ) field = 'library';
+                            else if ( field == 'category_id' ) field = 'category';
+                            if ( field.length > 0 ) {
+                                if ( direction == 'desc' ) sortFields.push("-"+field);
+                                else sortFields.push("+"+field);
+                            }
+                        }
+                        if ( readParams['sSearch'].length > 0 ) {
+                            searchParams['_search'] = readParams['sSearch'];
+                        }
+                        searchParams['_order_by'] = sortFields.join(",");
+                        $.ajax({
+                            'dataType': 'json',
+                            'type': 'GET',
+                            'url': sSource,
+                            'data': searchParams,
+                            'success': function(json){
+                                fnCallback(json);
+                            }
+                        });
+                    },
+                })).columnFilter({
+                    'sPlaceHolder': 'head:after',
+                    'sRangeFormat': 'Von {from}<br>bis {to}',
+                    'aoColumns': [
+                        { 'type': 'date-range' },
+                        { 'type': 'text' },
+                        { 'type': 'text' },
+                        { 'type': 'text' },
+                        { 'type': 'select', 'values': [% branches.json %] },
+                        { 'type': 'select', 'values': [% categorylist.json %]  },
+                        { 'type': 'select', 'values': [
+                                                       {"label":"Abgeschlossen","value":"close"},
+                                                       {"label":"Gebühr beglichen","value":"paid"},
+                                                       {"label":"Kommentiert","value":"comment"},
+                                                       {"label":"Mahnfall erfasst","value":"added"},
+                                                       {"label":"Mahnung","value":"claimed"},
+                                                       {"label":"Pausiert","value":"pause"},
+                                                       {"label":"Reaktiviert","value":"reopen"}
+                                                       ] },
+                        { 'type': 'text' },
+                        { 'type': 'text' },
+                        { 'type': 'number-range' },
+                        null,
+                        null
+                    ]
+                });
+                
+                claimList.api().columns.adjust().draw();
+
+                $('input#latePaymentClaimHistory_range_from_1,input#latePaymentClaimHistory_range_to_1').change(function (event) {
+                    event.target._flatpickr.close();
+                    $(".clear_date").first().focus();
+                    claimList.api().columns.adjust().draw();
+                });
+            });
+        [% END %]
+    </script>
+
+    [% PROCESS patron_search_js table_id => 'memberresultst', categories => categories, libraries => libraries, extended_attribute_types => attribute_type_codes, columns => columns, filter => filter, actions => [selection_type], preview_on_name_click => 1, callback => callback %]
+[% END %]
+[% INCLUDE 'intranet-bottom.inc' %]

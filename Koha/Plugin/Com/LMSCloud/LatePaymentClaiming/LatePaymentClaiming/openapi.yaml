@@ -1,0 +1,1856 @@
+swagger: "2.0"
+info:
+  title: late payment claims API
+  description: |-
+    ## configuration
+     * **configurations** (get): list available configurations <br> status code 200 (OK) on success
+     * **configuration** (get): returns late payment claim configuration <br> status code 200 (OK) on success
+     * **configuration** (post): store a late payment claim configuration<br> status code 202 (Accepted) on success
+     * **configuration** (delete): delete late payment claim configuration<br> status code 202 (Accepted) on success
+  contact:
+    name: LMSCloud GmbH
+    url: https://lmscloud.de
+    email: service@lmscloud.de
+  license:
+    name: GNU General Public License Version 3
+    url: https://www.gnu.org/licenses/gpl-3.0.html
+  version: 0.1.0
+paths:
+  /configurations:
+    get:
+      x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfigurationController#listConfigurations
+      summary: list all available configurations
+      operationId: latepaymentclaiming-get-configurations
+      produces: 
+        - application/json
+      security:
+        - APIKeyHeader: []
+      responses:
+        "200":
+          description: Successful Response
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                library_id:
+                  type: string
+                  description: Identifier for the patron's home library or * for all libraries
+                category_id:
+                  type: string
+                  description: Internal identifier for the patron's category or * for all categories
+                levels_defined:
+                  type: integer
+                  description: number of defined late claim levels
+        "400":
+          description: Validation Error
+          schema:
+            properties:
+              detail:
+                type: string
+        "401":
+          description: Invalid API key
+          schema:
+            properties:
+              detail:
+                type: string
+      x-koha-authorization:
+        permissions:
+          plugins: plugins_configure
+  /configuration/{library_id}/{category_id}:
+    get:
+      x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfigurationController#getConfiguration
+      summary: get all settings of a configuration
+      operationId: latepaymentclaiming-get-configuration
+      produces: 
+        - application/json
+      security:
+        - APIKeyHeader: []
+      parameters:
+        - name: library_id
+          in: path
+          required: true
+          type: string
+          maxLength: 10
+          description: Identifier for the patron's home library or * for all libraries 
+        - name: category_id
+          in: path
+          required: true
+          type: string
+          maxLength: 10
+          description: Internal identifier for the patron's category or * for all categories
+      responses:
+        "200":
+          description: Successful Response
+          schema:
+            type: object
+            properties:
+              library_id:
+                type: string
+                description: Identifier for the patron's home library or * for all libraries
+              category_id:
+                type: string
+                description: Internal identifier for the patron's category or * for all categories
+              level_configuration:
+                type: array
+                description: number of defined late claim levels
+                items:
+                  type: object
+                  properties:
+                    level:
+                      type: integer
+                      description: Level of the late claim configuration
+                    outstanding_fee_limit:
+                      type:
+                        - number
+                        - "null"
+                      description: Outstanding fee limit that must be reached for late payment claiming
+                    patron_selections:
+                      type: array
+                      description: List of selections that are used to find patrons that reach the level
+                      items:
+                        type: array
+                        description: Selection conditions that are used to find patrons that reach the level
+                        items:
+                          type: object
+                          properties:
+                            negate:
+                              type: boolean
+                              description: negate the search condition
+                            search_field:
+                              type: string
+                              description: search field
+                            search_value:
+                              type: string
+                              description: search field value
+                            search_from:
+                              type: string
+                              description: from value
+                            search_to:
+                              type: string
+                              description: to value
+                            search_type:
+                              type: string
+                              description: how to search
+                    ban_actions:
+                      type: array
+                      description: List of ban actions that are performed if a patron late payment claim reaches the level
+                      items:
+                        type: object
+                        properties:
+                          action:
+                            type: string
+                            description: name of the action
+                          description:
+                            type: string
+                            description: description of the action
+                          parameter:
+                            type: array
+                            description: list of action parameters
+                            items:
+                              type: object
+                              properties:
+                                parameter_name:
+                                  type: string
+                                  description: name of the parameter
+                                parameter_value:
+                                  type:
+                                    - number
+                                    - string
+                                    - boolean
+                                    - "null"
+                                  description: value of the parameter
+                    unban_actions:
+                      type: array
+                      description: List of unban actions that are performed if a patron has paid the outstanding fees
+                      items:
+                        type: object
+                        properties:
+                          action:
+                            type: string
+                            description: name of the action
+                          description:
+                            type: string
+                            description: description of the action
+                          parameter:
+                            type: array
+                            description: list of action parameters
+                            items:
+                              type: object
+                              properties:
+                                parameter_name:
+                                  type: string
+                                  description: name of the parameter
+                                parameter_value:
+                                  type:
+                                    - number
+                                    - string
+                                    - boolean
+                                    - "null"
+                                  description: value of the parameter
+        "400":
+          description: Error etrieving the card status
+          schema:
+            properties:
+              detail:
+                type: string
+        "404":
+          description: Card not found
+          schema:
+            properties:
+              detail:
+                type: string
+      x-koha-authorization:
+        permissions:
+          plugins: plugins_configure
+    delete:
+      x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfigurationController#removeConfiguration
+      summary: remove all settings of a configuration
+      operationId: latepaymentclaiming-remove-configuration
+      produces: 
+        - application/json
+      security:
+        - APIKeyHeader: []
+      parameters:
+        - name: library_id
+          in: path
+          required: true
+          type: string
+          maxLength: 10
+          description: Identifier for the patron's home library or * for all libraries 
+        - name: category_id
+          in: path
+          required: true
+          type: string
+          maxLength: 10
+          description: Internal identifier for the patron's category or * for all categories
+      responses:
+        "200":
+          description: Successful Response
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+        "400":
+          description: Error etrieving the card status
+          schema:
+            properties:
+              detail:
+                type: string
+        "404":
+          description: Card not found
+          schema:
+            properties:
+              detail:
+                type: string
+      x-koha-authorization:
+        permissions:
+          plugins: plugins_configure
+    post:
+      x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfigurationController#saveConfiguration
+      summary: save all settings of a configuration
+      operationId: latepaymentclaiming-put-configuration
+      security:
+        - APIKeyHeader: []
+      produces: 
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - name: library_id
+          in: path
+          required: true
+          type: string
+          maxLength: 10
+          description: Identifier for the patron's home library or * for all libraries 
+        - name: category_id
+          in: path
+          required: true
+          type: string
+          maxLength: 10
+          description: Internal identifier for the patron's category or * for all categories
+        - name: body
+          in: body
+          description: card status parameters
+          required: true
+          schema:
+            type: object
+            properties:
+              library_id:
+                type: string
+                description: Identifier for the patron's home library or * for all libraries
+              category_id:
+                type: string
+                description: Internal identifier for the patron's category or * for all categories
+              level_configuration:
+                type: array
+                description: number of defined late claim levels
+                items:
+                  type: object
+                  properties:
+                    level:
+                      type: integer
+                      description: Level of the late claim configuration
+                    outstanding_fee_limit:
+                      type:
+                        - number
+                        - "null"
+                      description: Outstanding fee limit that must be reached for late payment claiming
+                    patron_selections:
+                      type: array
+                      description: List of selections that are used to find patrons that reach the level
+                      items:
+                        type: array
+                        description: Selection conditions that are used to find patrons that reach the level
+                        items:
+                          type: object
+                          properties:
+                            negate:
+                              type: boolean
+                              description: negate the search condition
+                            search_field:
+                              type: string
+                              description: search field
+                            search_fieldset:
+                              type: string
+                              description: which field set to search
+                            search_value:
+                              type: string
+                              description: search field value
+                            search_from:
+                              type: string
+                              description: from value
+                            search_to:
+                              type: string
+                              description: to value
+                            search_type:
+                              type: string
+                              description: how to search
+                    ban_actions:
+                      type: array
+                      description: List of ban actions that are performed if a patron late payment claim reaches the level
+                      items:
+                        type: object
+                        properties:
+                          action:
+                            type: string
+                            description: name of the action
+                          description:
+                            type: string
+                            description: description of the action
+                          parameter:
+                            type: array
+                            description: list of action parameters
+                            items:
+                              type: object
+                              properties:
+                                parameter_name:
+                                  type: string
+                                  description: name of the parameter
+                                parameter_value:
+                                  type:
+                                    - number
+                                    - string
+                                    - boolean
+                                    - "null"
+                                  description: value of the parameter
+                    unban_actions:
+                      type: array
+                      description: List of unban actions that are performed if a patron has paid the outstanding fees
+                      items:
+                        type: object
+                        properties:
+                          action:
+                            type: string
+                            description: name of the action
+                          description:
+                            type: string
+                            description: description of the action
+                          parameter:
+                            type: array
+                            description: list of action parameters
+                            items:
+                              type: object
+                              properties:
+                                parameter_name:
+                                  type: string
+                                  description: name of the parameter
+                                parameter_value:
+                                  type:
+                                    - number
+                                    - string
+                                    - boolean
+                                    - "null"
+                                  description: value of the parameter
+      responses:
+        "200":
+          description: Successful Response
+          schema:
+            type: object
+            properties:
+              library_id:
+                type: string
+                description: Identifier for the patron's home library or * for all libraries
+              category_id:
+                type: string
+                description: Internal identifier for the patron's category or * for all categories
+              level_configuration:
+                type: array
+                description: number of defined late claim levels
+                items:
+                  type: object
+                  properties:
+                    level:
+                      type: integer
+                      description: Level of the late claim configuration
+                    outstanding_fee_limit:
+                      type:
+                        - number
+                        - "null"
+                      description: Outstanding fee limit that must be reached for late payment claiming
+                    patron_selections:
+                      type: array
+                      description: List of selections that are used to find patrons that reach the level
+                      items:
+                        type: array
+                        description: Selection conditions that are used to find patrons that reach the level
+                        items:
+                          type: object
+                          properties:
+                            negate:
+                              type: boolean
+                              description: negate the search condition
+                            search_field:
+                              type: string
+                              description: search field
+                            search_value:
+                              type: string
+                              description: search field value
+                            search_from:
+                              type: string
+                              description: from value
+                            search_to:
+                              type: string
+                              description: to value
+                            search_type:
+                              type: string
+                              description: how to search
+                    ban_actions:
+                      type: array
+                      description: List of ban actions that are performed if a patron late payment claim reaches the level
+                      items:
+                        type: object
+                        properties:
+                          action:
+                            type: string
+                            description: name of the action
+                          description:
+                            type: string
+                            description: description of the action
+                          parameter:
+                            type: array
+                            description: list of action parameters
+                            items:
+                              type: object
+                              properties:
+                                parameter_name:
+                                  type: string
+                                  description: name of the parameter
+                                parameter_value:
+                                  type:
+                                    - number
+                                    - string
+                                    - boolean
+                                    - "null"
+                                  description: value of the parameter
+                    unban_actions:
+                      type: array
+                      description: List of unban actions that are performed if a patron has paid the outstanding fees
+                      items:
+                        type: object
+                        properties:
+                          action:
+                            type: string
+                            description: name of the action
+                          description:
+                            type: string
+                            description: description of the action
+                          parameter:
+                            type: array
+                            description: list of action parameters
+                            items:
+                              type: object
+                              properties:
+                                parameter_name:
+                                  type: string
+                                  description: name of the parameter
+                                parameter_value:
+                                  type:
+                                    - number
+                                    - string
+                                    - boolean
+                                    - "null"
+                                  description: value of the parameter
+        "400":
+          description: Validation Error
+          schema:
+            properties:
+              detail:
+                type: string
+        "401":
+          description: Invalid API key
+          schema:
+            properties:
+              detail:
+                type: string
+      x-koha-authorization:
+        permissions:
+          plugins: plugins_configure
+
+  /patrons/list:
+   post:
+      x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingController#searchPatrons
+      summary: search patrons using late payment claim patron selections
+      operationId: latepaymentclaiming-search-patrons
+      security:
+        - APIKeyHeader: []
+      produces: 
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - name: x-koha-embed
+          in: header
+          required: false
+          description: Embed list sent as a request header
+          type: array
+          items:
+            type: string
+            enum:
+              - extended_attributes
+              - checkouts+count
+              - overdues+count
+              - account_balance
+              - library
+        - name: _per_page
+          description: "Page size, for paginated object listing"
+          in: query
+          required: false
+          type: integer
+        - name: _page
+          description: "Page number, for paginated object listing"
+          in: query
+          required: false
+          type: integer
+        - name: _order_by
+          collectionFormat: csv
+          description: Sorting criteria
+          in: query
+          items:
+            type: string
+          required: false
+          type: array
+        - name: body
+          in: body
+          description: card status parameters
+          required: true
+          schema:
+            type: object
+            properties:
+              library_id:
+                type: string
+                description: Identifier for the patron's home library or * for all libraries
+              category_id:
+                type: string
+                description: Internal identifier for the patron's category or * for all categories
+              level:
+                type: integer
+                description: Level of the late claim configuration
+              patron_selection:
+                type: array
+                description: Selection conditions that are used to find patrons that reach the level
+                items:
+                  type: object
+                  properties:
+                    negate:
+                      type: boolean
+                      description: negate the search condition
+                    search_field:
+                      type: string
+                      description: search field
+                    search_fieldset:
+                      type: string
+                      description: which field set to search
+                    search_value:
+                      type: string
+                      description: search field value
+                    search_from:
+                      type: string
+                      description: from value
+                    search_to:
+                      type: string
+                      description: to value
+                    search_type:
+                      type: string
+                      description: how to search
+              search_options:
+                type: array
+                description: array of search options
+                items:
+                  type: object
+                  additionalProperties: {}
+      responses:
+        "200":
+          description: A list of patrons
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    patron_id:
+                      type: integer
+                      description: Internal patron identifier
+                    cardnumber:
+                      type:
+                        - string
+                        - "null"
+                      description: library assigned user identifier
+                    surname:
+                      type:
+                        - string
+                        - "null"
+                      description: patron's last name
+                    firstname:
+                      type:
+                        - string
+                        - "null"
+                      description: patron's first name
+                    middle_name:
+                      type:
+                        - string
+                        - "null"
+                      description: patron's middle name
+                    title:
+                      type:
+                        - string
+                        - "null"
+                      description: patron's title
+                    other_name:
+                      type:
+                        - string
+                        - "null"
+                      description: any other names associated with the patron
+                    initials:
+                      type:
+                        - string
+                        - "null"
+                      description: initials of the patron
+                    pronouns:
+                      type:
+                        - string
+                        - "null"
+                      description: pronouns of the patron
+                    street_number:
+                      type:
+                        - string
+                        - "null"
+                      description: street number of patron's primary address
+                    street_type:
+                      type:
+                        - string
+                        - "null"
+                      description: street type of patron's primary address
+                    address:
+                      type:
+                        - string
+                        - "null"
+                      description: first address line of patron's primary address
+                    address2:
+                      type:
+                        - string
+                        - "null"
+                      description: second address line of patron's primary address
+                    city:
+                      type:
+                        - string
+                        - "null"
+                      description: city or town of patron's primary address
+                    state:
+                      type:
+                        - string
+                        - "null"
+                      description: state or province of patron's primary address
+                    postal_code:
+                      type:
+                        - string
+                        - "null"
+                      description: zip or postal code of patron's primary address
+                    country:
+                      type:
+                        - string
+                        - "null"
+                      description: country of patron's primary address
+                    email:
+                      type:
+                        - string
+                        - "null"
+                      description: primary email address for patron's primary address
+                    phone:
+                      type:
+                        - string
+                        - "null"
+                      description: primary phone number for patron's primary address
+                    mobile:
+                      type:
+                        - string
+                        - "null"
+                      description: the other phone number for patron's primary address
+                    fax:
+                      type:
+                        - string
+                        - "null"
+                      description: fax number for patron's primary address
+                    secondary_email:
+                      type:
+                        - string
+                        - "null"
+                      description: secondary email address for patron's primary address
+                    secondary_phone:
+                      type:
+                        - string
+                        - "null"
+                      description: secondary phone number for patron's primary address
+                    altaddress_street_number:
+                      type:
+                        - string
+                        - "null"
+                      description: street number of patron's alternate address
+                    altaddress_street_type:
+                      type:
+                        - string
+                        - "null"
+                      description: street type of patron's alternate address
+                    altaddress_address:
+                      type:
+                        - string
+                        - "null"
+                      description: first address line of patron's alternate address
+                    altaddress_address2:
+                      type:
+                        - string
+                        - "null"
+                      description: second address line of patron's alternate address
+                    altaddress_city:
+                      type:
+                        - string
+                        - "null"
+                      description: city or town of patron's alternate address
+                    altaddress_state:
+                      type:
+                        - string
+                        - "null"
+                      description: state or province of patron's alternate address
+                    altaddress_postal_code:
+                      type:
+                        - string
+                        - "null"
+                      description: zip or postal code of patron's alternate address
+                    altaddress_country:
+                      type:
+                        - string
+                        - "null"
+                      description: country of patron's alternate address
+                    altaddress_email:
+                      type:
+                        - string
+                        - "null"
+                      description: email address for patron's alternate address
+                    altaddress_phone:
+                      type:
+                        - string
+                        - "null"
+                      description: phone number for patron's alternate address
+                    date_of_birth:
+                      type:
+                        - string
+                        - "null"
+                      format: date
+                      description: patron's date of birth
+                    library_id:
+                      type: string
+                      description: Internal identifier for the patron's home library
+                    category_id:
+                      type: string
+                      description: Internal identifier for the patron's category
+                    date_enrolled:
+                      type:
+                        - string
+                        - "null"
+                      format: date
+                      description: date the patron was added to Koha
+                    expiry_date:
+                      type:
+                        - string
+                        - "null"
+                      format: date
+                      description: date the patron's card is set to expire
+                    date_renewed:
+                      type:
+                        - string
+                        - "null"
+                      format: date
+                      description: date the patron's card was last renewed
+                    incorrect_address:
+                      type:
+                        - boolean
+                        - "null"
+                      description: set to 1 if library marked this patron as having an unconfirmed address
+                    patron_card_lost:
+                      type:
+                        - boolean
+                        - "null"
+                      description: set to 1 if library marked this patron as having lost his card
+                    restricted:
+                      type: boolean
+                      readOnly: true
+                      description: If any restriction applies to the patron
+                    restriction_comment:
+                      type:
+                        - string
+                        - "null"
+                      readOnly: true
+                      description: Comment on a possible restriction
+                    staff_notes:
+                      type:
+                        - string
+                        - "null"
+                      description: a note on the patron's account
+                    relationship_type:
+                      type:
+                        - string
+                        - "null"
+                      description: used for children to include the relationship to their guarantor
+                    gender:
+                      type:
+                        - string
+                        - "null"
+                      description: patron's gender
+                    userid:
+                      type:
+                        - string
+                        - "null"
+                      description: patron's login
+                    opac_notes:
+                      type:
+                        - string
+                        - "null"
+                      description: a note on the patron's account visible in OPAC and staff interface
+                    altaddress_notes:
+                      type:
+                        - string
+                        - "null"
+                      description: a note related to patron's alternate address
+                    statistics_1:
+                      type:
+                        - string
+                        - "null"
+                      description: a field that can be used for any information unique to the library
+                    statistics_2:
+                      type:
+                        - string
+                        - "null"
+                      description: a field that can be used for any information unique to the library
+                    autorenew_checkouts:
+                      type: boolean
+                      description: indicate whether auto-renewal is allowed for patron
+                    altcontact_firstname:
+                      type:
+                        - string
+                        - "null"
+                      description: first name of alternate contact for the patron
+                    altcontact_title:
+                      type:
+                        - string
+                        - "null"
+                      description: title of alternate contact for the patron
+                    altcontact_surname:
+                      type:
+                        - string
+                        - "null"
+                      description: surname or last name of the alternate contact for the patron
+                    altcontact_address:
+                      type:
+                        - string
+                        - "null"
+                      description: the first address line for the alternate contact for the patron
+                    altcontact_address2:
+                      type:
+                        - string
+                        - "null"
+                      description: the second address line for the alternate contact for the patron
+                    altcontact_city:
+                      type:
+                        - string
+                        - "null"
+                      description: the city for the alternate contact for the patron
+                    altcontact_state:
+                      type:
+                        - string
+                        - "null"
+                      description: the state for the alternate contact for the patron
+                    altcontact_postal_code:
+                      type:
+                        - string
+                        - "null"
+                      description: the zipcode for the alternate contact for the patron
+                    altcontact_country:
+                      type:
+                        - string
+                        - "null"
+                      description: the country for the alternate contact for the patron
+                    altcontact_phone:
+                      type:
+                        - string
+                        - "null"
+                      description: the phone number for the alternate contact for the patron
+                    sms_number:
+                      type:
+                        - string
+                        - "null"
+                      description: the mobile phone number where the patron would like to receive notices (if SMS turned on)
+                    sms_provider_id:
+                      type:
+                        - integer
+                        - "null"
+                      description: the provider of the mobile phone number defined in smsalertnumber
+                    privacy:
+                      type: integer
+                      description: patron's privacy settings related to their checkout history
+                    privacy_guarantor_checkouts:
+                      type: integer
+                      description: controls if relatives can see this patron's checkouts
+                    privacy_guarantor_fines:
+                      type: boolean
+                      description: controls if relatives can see this patron's fines
+                    check_previous_checkout:
+                      type: string
+                      description: produce a warning for this patron if this item has previously been checked
+                        out to this patron if 'yes', not if 'no', defer to category setting if
+                        'inherit'
+                    updated_on:
+                      type: string
+                      format: date-time
+                      description: time of last change could be useful for synchronization with external systems (among others)
+                    last_seen:
+                      type:
+                        - string
+                        - "null"
+                      format: date-time
+                      description: last time a patron has been seen (connected at the OPAC or staff interface)
+                    lang:
+                      type: string
+                      description: lang to use to send notices to this patron
+                    login_attempts:
+                      type:
+                        - integer
+                        - "null"
+                      description: number of failed login attemps
+                    overdrive_auth_token:
+                      type:
+                        - string
+                        - "null"
+                      description: persist OverDrive auth token
+                    anonymized:
+                      type: boolean
+                      readOnly: true
+                      description: If the patron has been anonymized
+                    extended_attributes:
+                      type: array
+                      description: patron's extended attributes
+                      items:
+                        type: object
+                        properties:
+                          extended_attribute_id:
+                            description: Internal ID for the extended attribute
+                            type: integer
+                          type:
+                            description: Extended attribute type
+                            type: string
+                          value:
+                            description: Extended attribute value
+                            type:
+                              - string
+                              - "null"
+                    checkouts_count:
+                      type:
+                        - integer
+                        - "null"
+                      description: Number of checkouts
+                    overdues_count:
+                      type:
+                        - integer
+                        - "null"
+                      description: Number of overdued checkouts
+                    account_balance:
+                      type:
+                        - number
+                        - "null"
+                      description: Balance of the patron's account
+                    library:
+                      type:
+                        - object
+                        - "null"
+                      description: Library of the patron
+              recordsTotal:
+                type: integer
+                description: number of total records
+              recordsFiltered:
+                type: integer
+                description: number of records in page
+              draw:
+                type: integer
+                description: number of records in page
+        "400":
+          description: Validation Error
+          schema:
+            properties:
+              detail:
+                type: string
+        "401":
+          description: Invalid API key
+          schema:
+            properties:
+              detail:
+                type: string
+      x-koha-authorization:
+        permissions:
+          - plugins: plugins_configure
+          - borrowers: "edit_borrowers"
+
+  /late_payment_claims:
+    get:
+      x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingController#getLatePaymentClaims
+      operationId: getLatePaymentClaims
+      tags:
+        - latepaymentclaims-list
+      summary: List late payment claims
+      produces:
+        - application/json
+      parameters:
+        - name: claim_id
+          in: query
+          description: Search on claim_id of the late payment claim
+          required: false
+          type: string
+        - name: cardnumber
+          in: query
+          description: Case insensitive search on patrons cardnumber
+          required: false
+          type: string
+        - name: patron
+          in: query
+          description: Case insensitive search on patron fields
+          required: false
+          type: string
+        - name: library
+          in: query
+          description: Case insensitive search on patrons library code or library name
+          required: false
+          type: string
+        - name: category
+          in: query
+          description: Case insensitive search on patrons category code or category name
+          required: false
+          type: string
+        - name: creationdate_from
+          in: query
+          description: Search late payment claim creation date from (yyyy-mm-dd)
+          required: false
+          type: string
+        - name: creationdate_to
+          in: query
+          description: Search late payment claim creation date to (yyyy-mm-dd)
+          required: false
+          type: string
+        - name: level
+          in: query
+          description: Search level of the late payment claim creation starting from 1
+          required: false
+          type: string
+        - name: status
+          in: query
+          description: Search state of the late payment claim 
+          required: false
+          type: string
+        - name: comment
+          in: query
+          description: Search comment of the late payment claim 
+          required: false
+          type: string
+        - name: account_balance
+          in: query
+          description: Search the account balance 
+          required: false
+          type: string
+        - name: _per_page
+          description: "Page size, for paginated object listing"
+          in: query
+          required: false
+          type: integer
+        - name: _page
+          description: "Page number, for paginated object listing"
+          in: query
+          required: false
+          type: integer
+        - name: draw
+          description: "Echo number for the table"
+          in: query
+          required: false
+          type: integer
+        - name: _order_by
+          description: Sorting criteria
+          in: query
+          required: false
+          type: string
+      responses:
+        "200":
+          description: Successful Response
+          schema:
+            type: object
+            properties:
+              recordsTotal:
+                type: integer
+                description: number of total records
+              recordsFiltered:
+                type: integer
+                description: number of records in page
+              draw:
+                type: integer
+                description: number of records in page
+              data:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    claim_id:
+                      type: integer
+                      description: Claim ID of the late payment claim
+                    patron_id:
+                      type: integer
+                      description: Internal patron identifier
+                    cardnumber:
+                      type:
+                        - string
+                        - "null"
+                      description: library assigned user identifier
+                    surname:
+                      type:
+                        - string
+                        - "null"
+                      description: patron's last name
+                    firstname:
+                      type:
+                        - string
+                        - "null"
+                      description: patron's first name
+                    middle_name:
+                      type:
+                        - string
+                        - "null"
+                      description: patron's middle name
+                    title:
+                      type:
+                        - string
+                        - "null"
+                      description: patron's title
+                    other_name:
+                      type:
+                        - string
+                        - "null"
+                      description: any other names associated with the patron
+                    initials:
+                      type:
+                        - string
+                        - "null"
+                      description: initials of the patron
+                    pronouns:
+                      type:
+                        - string
+                        - "null"
+                      description: pronouns of the patron
+                    street_number:
+                      type:
+                        - string
+                        - "null"
+                      description: street number of patron's primary address
+                    street_type:
+                      type:
+                        - string
+                        - "null"
+                      description: street type of patron's primary address
+                    address:
+                      type:
+                        - string
+                        - "null"
+                      description: first address line of patron's primary address
+                    address2:
+                      type:
+                        - string
+                        - "null"
+                      description: second address line of patron's primary address
+                    city:
+                      type:
+                        - string
+                        - "null"
+                      description: city or town of patron's primary address
+                    state:
+                      type:
+                        - string
+                        - "null"
+                      description: state or province of patron's primary address
+                    postal_code:
+                      type:
+                        - string
+                        - "null"
+                      description: zip or postal code of patron's primary address
+                    country:
+                      type:
+                        - string
+                        - "null"
+                      description: country of patron's primary address
+                    email:
+                      type:
+                        - string
+                        - "null"
+                      description: primary email address for patron's primary address
+                    phone:
+                      type:
+                        - string
+                        - "null"
+                      description: primary phone number for patron's primary address
+                    mobile:
+                      type:
+                        - string
+                        - "null"
+                      description: the other phone number for patron's primary address
+                    fax:
+                      type:
+                        - string
+                        - "null"
+                      description: fax number for patron's primary address
+                    secondary_email:
+                      type:
+                        - string
+                        - "null"
+                      description: secondary email address for patron's primary address
+                    secondary_phone:
+                      type:
+                        - string
+                        - "null"
+                      description: secondary phone number for patron's primary address
+                    library_id:
+                      type: 
+                        - string
+                        - "null"
+                      description: Internal identifier for the patron's home library
+                    category_id:
+                      type: 
+                        - string
+                        - "null"
+                      description: Internal identifier for the patron's category
+                    creationdate:
+                      type: 
+                        - string
+                        - "null"
+                      format: date
+                      description: Creation date of the late payment claim
+                    level:
+                      type: 
+                        - integer
+                        - "null"
+                      description: Level of the late payment claim
+                    status:
+                      type:  
+                        - string
+                        - "null"
+                      description: State of the late payment claim
+                    comment:
+                      type:  
+                        - string
+                        - "null"
+                      description: Comment of the late payment claim
+                    account_balance:
+                      type:
+                        - number
+                        - "null"
+                      description: Balance of the patron's account
+        "400":
+          description: Validation Error
+          schema:
+            properties:
+              detail:
+                type: string
+        "401":
+          description: Invalid API key
+          schema:
+            properties:
+              detail:
+                type: string
+      x-koha-authorization:
+        permissions:
+          plugins: plugins_tool
+
+  /late_payment_claim/{claim_id}/comment:
+    get:
+      x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingController#getLatePaymentClaimComment
+      operationId: getLatePaymentClaimComment
+      tags:
+        - latepaymentclaims-get-comment
+      summary: Get late payment claim comment
+      produces:
+        - application/json
+      parameters:
+        - name: claim_id
+          in: path
+          description: Late payment claim id
+          required: true
+          type: string
+      responses:
+        "200":
+          description: The comment of the late payment claim
+          schema:
+            type: object
+            properties:
+              comment:
+                type: string
+                description: Comment of the late payment claim
+        "400":
+          description: Validation Error
+          schema:
+            properties:
+              detail:
+                type: string
+        "401":
+          description: Invalid API key
+          schema:
+            properties:
+              detail:
+                type: string
+      x-koha-authorization:
+        permissions:
+          plugins: plugins_tool
+  /late_payment_claim/{claim_id}:
+    post:
+      x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingController#updateLatePaymentClaimComment
+      summary: Set late payment claim comment
+      operationId: setLatePaymentClaimComment
+      tags:
+        - latepaymentclaims-set-comment
+      produces:
+        - application/json
+      parameters:
+        - name: claim_id
+          in: path
+          description: Late payment claim id
+          required: true
+          type: string
+        - name: body
+          in: body
+          description: card status parameters
+          required: true
+          schema:
+            type: object
+            properties:
+              comment:
+                description: Comment of the late payment claim for change
+                type: string
+              status:
+                description: Provide updated status of the late payment claim
+                type: string
+              action:
+                description: Action of the data change
+                type: string
+      responses:
+        "200":
+          description: The changed comment of the late payment claim
+          schema:
+            type: object
+            properties:
+              claim_id:
+                type: integer
+                description: Claim ID of the late payment claim
+              patron_id:
+                type: integer
+                description: Internal patron identifier
+              cardnumber:
+                type:
+                  - string
+                  - "null"
+                description: library assigned user identifier
+              surname:
+                type:
+                  - string
+                  - "null"
+                description: patron's last name
+              firstname:
+                type:
+                  - string
+                  - "null"
+                description: patron's first name
+              middle_name:
+                type:
+                  - string
+                  - "null"
+                description: patron's middle name
+              title:
+                type:
+                  - string
+                  - "null"
+                description: patron's title
+              other_name:
+                type:
+                  - string
+                  - "null"
+                description: any other names associated with the patron
+              initials:
+                type:
+                  - string
+                  - "null"
+                description: initials of the patron
+              pronouns:
+                type:
+                  - string
+                  - "null"
+                description: pronouns of the patron
+              street_number:
+                type:
+                  - string
+                  - "null"
+                description: street number of patron's primary address
+              street_type:
+                type:
+                  - string
+                  - "null"
+                description: street type of patron's primary address
+              address:
+                type:
+                  - string
+                  - "null"
+                description: first address line of patron's primary address
+              address2:
+                type:
+                  - string
+                  - "null"
+                description: second address line of patron's primary address
+              city:
+                type:
+                  - string
+                  - "null"
+                description: city or town of patron's primary address
+              state:
+                type:
+                  - string
+                  - "null"
+                description: state or province of patron's primary address
+              postal_code:
+                type:
+                  - string
+                  - "null"
+                description: zip or postal code of patron's primary address
+              country:
+                type:
+                  - string
+                  - "null"
+                description: country of patron's primary address
+              email:
+                type:
+                  - string
+                  - "null"
+                description: primary email address for patron's primary address
+              phone:
+                type:
+                  - string
+                  - "null"
+                description: primary phone number for patron's primary address
+              mobile:
+                type:
+                  - string
+                  - "null"
+                description: the other phone number for patron's primary address
+              fax:
+                type:
+                  - string
+                  - "null"
+                description: fax number for patron's primary address
+              secondary_email:
+                type:
+                  - string
+                  - "null"
+                description: secondary email address for patron's primary address
+              secondary_phone:
+                type:
+                  - string
+                  - "null"
+                description: secondary phone number for patron's primary address
+              library_id:
+                type: 
+                  - string
+                  - "null"
+                description: Internal identifier for the patron's home library
+              category_id:
+                type: 
+                  - string
+                  - "null"
+                description: Internal identifier for the patron's category
+              creationdate:
+                type: 
+                  - string
+                  - "null"
+                format: date
+                description: Creation date of the late payment claim
+              level:
+                type: 
+                  - integer
+                  - "null"
+                description: Level of the late payment claim
+              status:
+                type:  
+                  - string
+                  - "null"
+                description: State of the late payment claim
+              comment:
+                type:  
+                  - string
+                  - "null"
+                description: Comment of the late payment claim
+              account_balance:
+                type:
+                  - number
+                  - "null"
+                description: Balance of the patron's account
+        "400":
+          description: Validation Error
+          schema:
+            properties:
+              detail:
+                type: string
+        "401":
+          description: Invalid API key
+          schema:
+            properties:
+              detail:
+                type: string
+      x-koha-authorization:
+        permissions:
+          plugins: plugins_tool
+  /late_payment_claim_history:
+    get:
+      x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingController#getLatePaymentClaimHistory
+      operationId: getLatePaymentClaimHistory
+      tags:
+        - latepaymentclaims-history
+      summary: List late payment claim history
+      produces:
+        - application/json
+      parameters:
+        - name: claim_id
+          in: query
+          description: Search on claim_id of the late payment claim
+          required: false
+          type: string
+        - name: cardnumber
+          in: query
+          description: Case insensitive search on patrons cardnumber
+          required: false
+          type: string
+        - name: patron_id
+          in: query
+          description: Case insensitive search on patrons ids
+          required: false
+          type: string
+        - name: patron
+          in: query
+          description: Case insensitive search on patron fields
+          required: false
+          type: string
+        - name: library
+          in: query
+          description: Case insensitive search on patrons library code or library name
+          required: false
+          type: string
+        - name: category
+          in: query
+          description: Case insensitive search on patrons category code or category name
+          required: false
+          type: string
+        - name: creationdate_from
+          in: query
+          description: Search late payment claim creation date from (yyyy-mm-dd)
+          required: false
+          type: string
+        - name: creationdate_to
+          in: query
+          description: Search late payment claim creation date to (yyyy-mm-dd)
+          required: false
+          type: string
+        - name: level
+          in: query
+          description: Search level of the late payment claim creation starting from 1
+          required: false
+          type: string
+        - name: status
+          in: query
+          description: Search state of the late payment claim 
+          required: false
+          type: string
+        - name: action
+          in: query
+          description: Search actions of the late payment claim history 
+          required: false
+          type: string
+        - name: action_level
+          in: query
+          description: Search level of the late payment claim at the action time
+          required: false
+          type: string
+        - name: action_comment
+          in: query
+          description: Search historical actions comments
+          required: false
+          type: string
+        - name: action_account_balance_from
+          in: query
+          description: Search the historical account balance start values
+          required: false
+          type: string
+        - name: action_account_balance_to
+          in: query
+          description: Search the historical account balance end values
+          required: false
+          type: string
+        - name: action_timestamp_from
+          in: query
+          description: Search the late claim history by from datetime
+          required: false
+          type: string
+        - name: action_timestamp_to
+          in: query
+          description: Search the late claim history by to datetime
+          required: false
+          type: string
+        - name: _per_page
+          description: "Page size, for paginated object listing"
+          in: query
+          required: false
+          type: integer
+        - name: _page
+          description: "Page number, for paginated object listing"
+          in: query
+          required: false
+          type: integer
+        - name: draw
+          description: "Echo number for the table"
+          in: query
+          required: false
+          type: integer
+        - name: _order_by
+          description: Sorting criteria
+          in: query
+          required: false
+          type: string
+        - name: _search
+          description: Search all fields
+          in: query
+          required: false
+          type: string
+      responses:
+        "200":
+          description: Successful Response
+          schema:
+            type: object
+            properties:
+              recordsTotal:
+                type: integer
+                description: number of total records
+              recordsFiltered:
+                type: integer
+                description: number of records in page
+              draw:
+                type: integer
+                description: number of records in page
+              data:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    claim_id:
+                      type: integer
+                      description: Claim ID of the late payment claim
+                    patron_id:
+                      type: integer
+                      description: Internal patron identifier
+                    cardnumber:
+                      type:
+                        - string
+                        - "null"
+                      description: library assigned user identifier
+                    surname:
+                      type:
+                        - string
+                        - "null"
+                      description: patron's last name
+                    firstname:
+                      type:
+                        - string
+                        - "null"
+                      description: patron's first name
+                    middle_name:
+                      type:
+                        - string
+                        - "null"
+                      description: patron's middle name
+                    title:
+                      type:
+                        - string
+                        - "null"
+                      description: patron's title
+                    other_name:
+                      type:
+                        - string
+                        - "null"
+                      description: any other names associated with the patron
+                    initials:
+                      type:
+                        - string
+                        - "null"
+                      description: initials of the patron
+                    pronouns:
+                      type:
+                        - string
+                        - "null"
+                      description: pronouns of the patron
+                    library_id:
+                      type: 
+                        - string
+                        - "null"
+                      description: Internal identifier for the patron's home library
+                    category_id:
+                      type: 
+                        - string
+                        - "null"
+                      description: Internal identifier for the patron's category
+                    creationdate:
+                      type: 
+                        - string
+                        - "null"
+                      format: date
+                      description: Creation date of the late payment claim
+                    level:
+                      type: 
+                        - integer
+                        - "null"
+                      description: Level of the late payment claim
+                    status:
+                      type:  
+                        - string
+                        - "null"
+                      description: State of the late payment claim
+                    action:
+                      type:  
+                        - string
+                        - "null"
+                      description: Action, performed with the late payment claim
+                    action_level:
+                      type: 
+                        - integer
+                        - "null"
+                      description: Level of the late payment claim history entry
+                    action_comment:
+                      type:  
+                        - string
+                        - "null"
+                      description: Action comment of the late payment claim history entry
+                    action_account_balance:
+                      type:
+                        - number
+                        - "null"
+                      description: Balance of the patron's account at the time of the late payment claim history entry
+                    action_timestamp:
+                      type:  
+                        - string
+                        - "null"
+                      description: Tiemstamp of the late payment claim history entry
+                    action_timestamp:
+                      type:  
+                        - string
+                        - "null"
+                      description: Tiemstamp of the late payment claim history entry
+                    manager_patron_id:
+                      type:
+                        - integer
+                        - "null"
+                      description: Internal patron identifier of the manager
+                    manager_cardnumber:
+                      type:
+                        - string
+                        - "null"
+                      description: library assigned user identifier of the manager
+                    manager_surname:
+                      type:
+                        - string
+                        - "null"
+                      description: manager's last name
+                    manager_firstname:
+                      type:
+                        - string
+                        - "null"
+                      description: manager's first name
+                    manager_firstname:
+                      type:
+                        - string
+                        - "null"
+                      description: manager's first name
+                    manager_firstname:
+                      type:
+                        - string
+                        - "null"
+                      description: manager's first name
+                    patron_selections_description:
+                      type: array
+                      description: list of descriptions of the patron selections
+                      items:
+                        type: string
+                    ban_actions_description:
+                      type: array
+                      description: list of descriptions of the ban actions
+                      items:
+                        type: string
+                    library_name:
+                      type:
+                        - string
+                        - "null"
+                      description: name of the library
+                    category_name:
+                      type:
+                        - string
+                        - "null"
+                      description: name of the category
+        "400":
+          description: Validation Error
+          schema:
+            properties:
+              detail:
+                type: string
+        "401":
+          description: Invalid API key
+          schema:
+            properties:
+              detail:
+                type: string
+      x-koha-authorization:
+        permissions:
+          plugins: plugins_tool
