@@ -38,8 +38,9 @@ use Koha::Patron::Attribute::Types;
 use Koha::Patron::Categories;
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfiguration;
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming;
+use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution;
 
-our $VERSION = "0.3.0";
+our $VERSION = "0.4.0";
 our $MINIMUM_VERSION = "22.11";
 
 our $metadata = {
@@ -78,9 +79,10 @@ sub configure {
                 execution_monthes                 => scalar $cgi->param('execution_monthes') || '*',
                 execution_weekdays                => scalar $cgi->param('execution_weekdays') || '*',
                 execution_on_closing_days         => scalar $cgi->param('execution_on_closing_days') || 'yes',
+                execution_on_closing_days_library => scalar $cgi->param('execution_on_closing_days_library'),
                 account_balance_for_closing       => scalar $cgi->param('account_balance_for_closing') || '0.0',
                 unban_actions                     => scalar $cgi->param('unban_actions') || '[]',
-                do_automatic_close_on_payment     => (scalar $cgi->param('do_automatic_close_on_payment')) + 0
+                do_automatic_close_on_payment     => (scalar $cgi->param('do_automatic_close_on_payment')) + 0,
             }
         );
     }
@@ -173,6 +175,7 @@ sub configure {
         execution_monthes                 => $self->retrieve_data('execution_monthes') || '*',
         execution_weekdays                => $self->retrieve_data('execution_weekdays') || '*',
         execution_on_closing_days         => $self->retrieve_data('execution_on_closing_days') || 'yes',
+        execution_on_closing_days_library => $self->retrieve_data('execution_on_closing_days_library'),
         account_balance_for_closing       => $self->retrieve_data('account_balance_for_closing') || '0.0',
         unban_actions                     => $self->retrieve_data('unban_actions') || '[]',
         do_automatic_close_on_payment     => $self->retrieve_data('do_automatic_close_on_payment') + 0, 
@@ -183,6 +186,35 @@ sub configure {
     
     $self->output_html( $template->output() );
     exit;
+}
+
+sub cronjob_nightly {
+    my ( $self ) = @_;
+    
+    my $batch_active = $self->retrieve_data('batch_active') || 0;
+    return if ( $batch_active );
+    
+    my $execution_month_days = $self->retrieve_data('execution_month_days') || '*';
+    my $execution_monthes = $self->retrieve_data('execution_monthes') || '*';
+    my $execution_weekdays = $self->retrieve_data('execution_weekdays') || '*';
+    my $execution_on_closing_days = $self->retrieve_data('execution_on_closing_days');
+    my $execution_on_closing_days_library = $self->retrieve_data('execution_on_closing_days_library');
+
+    my $cron = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution->new();
+    
+    my $result = $cron->getNextDay(  
+                        $execution_month_days,
+                        $execution_monthes,
+                        $execution_weekdays,
+                        DateTime->now()->subtract(days => 1),
+                        $execution_on_closing_days,
+                        $execution_on_closing_days_library);
+    if ( $result->{ok} ) {
+        if ( $result->{next}->ymd('-') eq DateTime->now()->ymd('-') ) {
+            my $doClaim = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming->new();
+            $doClaim->claimPatronsOfAllConfigurations();
+        }
+    }
 }
 
 sub tool {

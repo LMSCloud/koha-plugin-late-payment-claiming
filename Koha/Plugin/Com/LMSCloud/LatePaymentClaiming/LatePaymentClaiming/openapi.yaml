@@ -1854,3 +1854,148 @@ paths:
       x-koha-authorization:
         permissions:
           plugins: plugins_tool
+
+  /check_execution_frequency:
+    get:
+      x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingController#checkExecutionFrequency
+      operationId: checkExecutionFrequency
+      tags:
+        - latepaymentclaims-check-execution-frequency
+      summary: Check a execution frequency of the late payment claim batch job
+      produces:
+        - application/json
+      parameters:
+        - name: day
+          in: query
+          description: Cron like specification of execution days
+          required: false
+          type: string
+        - name: month
+          in: query
+          description: Cron like specification of execution month
+          required: false
+          type: string
+        - name: weekday
+          in: query
+          description: Cron like specification of execution weekdays
+          required: false
+          type: string
+      responses:
+        "200":
+          description: Successful Response
+          schema:
+            type: object
+            properties:
+              ok:
+                type: integer
+                description: Was the check ok (0 or 1)
+              error:
+                type: integer
+                description: Is the any error (0 or 1)
+              day:
+                type: string
+                description: Cron like specification of execution days
+              month:
+                type: string
+                description: Cron like specification of execution days
+              weekday:
+                type: string
+                description: Cron like specification of execution weekdays
+              problems:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    field:
+                      type: string
+                      description: Which field has a problem
+                    value:
+                      type: string
+                      description: The problematic value
+                    error:
+                      type: string
+                      description: Type of error (validation)
+        "400":
+          description: Validation Error
+          schema:
+            properties:
+              detail:
+                type: string
+        "401":
+          description: Invalid API key
+          schema:
+            properties:
+              detail:
+                type: string
+      x-koha-authorization:
+        permissions:
+          plugins: plugins_tool
+
+  /get_next_execution_days:
+    get:
+      x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingController#getNextExecutionDays
+      operationId: getNextExecutionDays
+      tags:
+        - latepaymentclaims-get-next-execution-days
+      summary: Get next execution days
+      produces:
+        - application/json
+      parameters:
+        - name: day
+          in: query
+          description: Cron like specification of execution days
+          required: false
+          type: string
+        - name: month
+          in: query
+          description: Cron like specification of execution month
+          required: false
+          type: string
+        - name: weekday
+          in: query
+          description: Cron like specification of execution weekdays
+          required: false
+          type: string
+        - name: startDate
+          in: query
+          description: CDate to start, defaults to today
+          required: false
+          type: string
+        - name: execOnClosingDays
+          in: query
+          description: "Execute on closing days (0 or 1)"
+          required: false
+          type: string
+        - name: execOnClosingDayLibrary
+          in: query
+          description: "Use the opening/closing days calender of the selected library"
+          required: false
+          type: string
+        - name: count
+          in: query
+          description: "Count of next execution days to generate"
+          required: false
+          type: string
+      responses:
+        "200":
+          description: Successful Response
+          schema:
+            type: array
+            description: Days of execution
+            items:
+              type: string
+        "400":
+          description: Validation Error
+          schema:
+            properties:
+              detail:
+                type: string
+        "401":
+          description: Invalid API key
+          schema:
+            properties:
+              detail:
+                type: string
+      x-koha-authorization:
+        permissions:
+          plugins: plugins_tool

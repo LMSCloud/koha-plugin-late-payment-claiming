@@ -57,7 +57,7 @@
                 
                 [% IF !action %]
                 <!-- Notice our form here has no 'action', this is good, it means that our forms will always get passed back to 'plugins/run.pl'. You could hard code it instead if you prefer -->
-                <form method="post">
+                <form method="post" id="general_settings_form">
                 
                     <input type="hidden" name="class" value="[% CLASS %]"/>
                     <input type="hidden" name="method" value="[% METHOD %]"/>
@@ -143,10 +143,26 @@
                                     <span>Keine Ausführung an Geschlossentagen</span>
                                 </label>
                             </li>
+                            <li>
+                                <label class="radio" for="execution_on_closing_days_library">Benutze Kalender der Zweigstelle:</label>
+                                <select name="execution_on_closing_days_library" id="execution_on_closing_days_library">
+                                    [% FOREACH branch IN Branches.all( unfiltered => 1, restrict => NoMobileStations) %]
+                                        [% IF execution_on_closing_days_library == branch.branchcode %]
+                                        <option value="[% branch.branchcode | html %]"  selected>[% branch.branchname | html %]</option>
+                                        [% ELSE %]
+                                        <option value="[% branch.branchcode | html %]">[% branch.branchname | html %]</option>
+                                        [% END %]
+                                    [% END %]
+                                </select>
+                            </li>
+                            <li>
+                                <label for="generate_next_execution_days">Nächste Ausführungstage:</label>
+                                <input class="btn btn-xs" onclick="javascript:getNextExecutionDays()" name="generate_next_execution_days" id="generate_next_execution_days" value="Anzeigen" />
+                            </li>
                             <li style="margin-top:1.5em">
                             </li>
                             <li>
-                                <label class="radio" for="do_automatic_close_on_payment">Automatischer Abschluss von Mahnfällen</label>
+                                <label class="radio" for="do_automatic_close_on_payment">Automatischer Abschluss von Mahnfällen:</label>
                                 <label for="do_automatic_close_on_payment" class="do_automatic_close_on_payment_label">
                                    [% IF (do_automatic_close_on_payment) %]
                                    <input type="checkbox" name="do_automatic_close_on_payment" id="do_automatic_close_on_payment" value="1" checked />
@@ -647,6 +663,29 @@
             <div class="modal-footer">
                 <form id="action_selection_modal_action">
                     <button type="submit" class="btn btn-default approve">Aktion übernehmen</button>
+                    <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                </form>
+            </div> <!-- /.modal-footer -->
+        </div> <!-- /.modal-content -->
+    </div> <!-- /.modal-dialog -->
+</div> <!-- /.modal -->
+
+<!-- Show next execution dates -->
+<div class="modal" id="next_execution_days_modal" tabindex="-1" role="dialog" aria-labelledby="next_execution_days_title">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="next_execution_days_title">Gebührenmahnung pausieren</h4>
+            </div>
+            <div class="modal-body">
+                <legend id="next_execution_days_legend">Kommentar des Mahnfalls anpassen:</legend>
+                <div id="next_execution_days_content">
+                
+                </div>
+            </div> <!-- /.modal-body -->
+            <div class="modal-footer">
+                <form id="action_change_late_payment_claim">
                     <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
                 </form>
             </div> <!-- /.modal-footer -->
@@ -2185,6 +2224,67 @@
         $('#late_payment_claim_action_patron_list')[0].selectedIndex = 0;
         $('#late_payment_claim_action_patron_list_add').prop('checked',true);
         $('#late_payment_claim_action_patron_list_delete').prop('checked',false);
+    }
+    
+    function getNextExecutionDays() {
+        var day = $('#general_settings_form input[name="execution_month_days"]').val();
+        var month = $('#general_settings_form input[name="execution_monthes"]').val();
+        var weekdays = $('#general_settings_form input[name="execution_weekdays"]').val();
+        var executionOnClosingDays = $('#general_settings_form input[name="execution_on_closing_days"]').val();
+        var executionOnClosingDaysLibrary = $('#general_settings_form select[name="execution_on_closing_days_library"]').val();
+        
+        let options = {
+            url: '/api/v1/contrib/latepaymentclaiming/check_execution_frequency',
+            accepts: { text: "application/json" },
+            data: { day: day, month: month, weekday: weekdays }
+        };
+        $.ajax(options)
+        .then(function(result) {
+            if ( result.ok == 1 ) {
+                options = {
+                    url: '/api/v1/contrib/latepaymentclaiming/get_next_execution_days',
+                    accepts: { text: "application/json" },
+                    data: { day: day, month: month, weekday: weekdays, execOnClosingDays: executionOnClosingDays, execOnClosingDayLibrary: executionOnClosingDaysLibrary }
+                };
+                $.ajax(options)
+                .then(function(result) {
+                    var modal = $("#next_execution_days_modal");
+                    $('#next_execution_days_title').text("Daten der nächsten Ausführung");
+                    $('#next_execution_days_legend').text("Mit den derzeitigen Einstellungen wird die Gebührenmahnung an folgenden nächsten Daten ausgeführt:");
+                    var txt = '<table><tbody>';
+                    result.forEach((item, index) => {
+                        txt += '<tr><td class="latepaypemnt_claim_list_rightcol">' + $date(item) + '</td></tr>';
+                    });
+                    txt += '</tbody></table>';
+                    $('#next_execution_days_content').html(txt);
+                    modal.modal("show");
+                });
+            } 
+            else if ( result.error == 1 ) {
+                let field = '';
+                var modal = $("#next_execution_days_modal");
+                
+                var txt = '<ul>';
+                result.problems.forEach((item, index) => {
+                    if ( item.error == 'validation' ) {
+                        let field = '';
+                        switch ( item.field ) {
+                            case 'day': field = 'Ausführung an Tagen des Monats'; break;
+                            case 'month': field = 'Ausführung in den Monaten'; break;
+                            case 'weekday': field = 'Ausführung an Wochentagen'; break;
+                        }
+                        txt += '<li>Der Wert "' + item.value + '" ist nicht korrekt für "' + field + '".</li>';
+                    }
+                });
+                console.log(result);
+                txt += '</ul>';
+                
+                $('#next_execution_days_title').text("Fehler");
+                $('#next_execution_days_legend').text("Fehler bei den Einstellungen zum Ausführungsdatum:");
+                $('#next_execution_days_content').html(txt);
+                modal.modal("show");
+            }
+        });
     }
      
     </script>
