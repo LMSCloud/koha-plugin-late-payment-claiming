@@ -193,7 +193,7 @@
                     'deferRender': true,
                     'paging': true,
                     'pageLength': 20,
-                    'lengthMenu': [[10, 20, 50, 100, -1], [10, 20, 50, 100, __('Alle')]],
+                    'lengthMenu': [10, 20, 50, 100, 500, 1000],
                     'pagingType': 'full_numbers',
                     'processing': true,
                     'fixedHeader': true,

@@ -19,9 +19,10 @@ use Modern::Perl;
 
 use base qw(Koha::Plugins::Base);
 use utf8;
-use JSON qw( decode_json );
+use JSON qw( decode_json encode_json );
 use Try::Tiny;
 use Cwd qw(abs_path);
+use Data::Dumper;
 
 use C4::Context;
 use C4::Koha qw( GetAuthorisedValues );
@@ -36,15 +37,16 @@ use Koha::List::Patron qw( GetPatronLists );
 use Koha::Patron::Attribute::Types;
 use Koha::Patron::Categories;
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfiguration;
+use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming;
 
-our $VERSION = "0.2.0";
+our $VERSION = "0.3.0";
 our $MINIMUM_VERSION = "22.11";
 
 our $metadata = {
     name            => 'Gebührenmahnung',
     author          => 'LMSCloud GmbH',
     date_authored   => '2026-02-15',
-    date_updated    => "2026-03-26",
+    date_updated    => "2026-03-30",
     minimum_version => $MINIMUM_VERSION,
     maximum_version => undef,
     version         => $VERSION,
@@ -76,6 +78,9 @@ sub configure {
                 execution_monthes                 => scalar $cgi->param('execution_monthes') || '*',
                 execution_weekdays                => scalar $cgi->param('execution_weekdays') || '*',
                 execution_on_closing_days         => scalar $cgi->param('execution_on_closing_days') || 'yes',
+                account_balance_for_closing       => scalar $cgi->param('account_balance_for_closing') || '0.0',
+                unban_actions                     => scalar $cgi->param('unban_actions') || '[]',
+                do_automatic_close_on_payment     => (scalar $cgi->param('do_automatic_close_on_payment')) + 0
             }
         );
     }
@@ -84,75 +89,81 @@ sub configure {
     
     my $do = $cgi->param('do') || '';
     
-    if ( $do eq 'edit' ) {
 
-        # get debit types
-        my @debit_types = Koha::Account::DebitTypes->search_with_library_limits({ can_be_invoiced => 1, archived => 0 },{})->as_list;
-        
-        # get restriction types
-        my @restriction_types = Koha::Patron::Restriction::Types->search()->as_list;
+
+    # get debit types
+    my @debit_types = Koha::Account::DebitTypes->search_with_library_limits({ can_be_invoiced => 1, archived => 0 },{})->as_list;
     
-        # get the patron attributes list
-        my @patron_attributes_values;
-        my @patron_attributes_codes;
-        my $library_id = C4::Context->userenv ? C4::Context->userenv->{'branch'} : undef;
-        my $patron_attribute_types = Koha::Patron::Attribute::Types->search_with_library_limits({}, {}, $library_id);
-        my @patron_categories = Koha::Patron::Categories->search_with_library_limits({}, {order_by => ['description']})->as_list;
-        while ( my $attr_type = $patron_attribute_types->next ) {
-            next if $attr_type->repeatable;
-            next if $attr_type->unique_id; # Don't display patron attributes that must be unqiue
-            my $options = $attr_type->authorised_value_category
-                ? GetAuthorisedValues( $attr_type->authorised_value_category )
-                : undef;
-            push @patron_attributes_values,
-                {
-                    attribute_code => $attr_type->code,
-                    options        => $options,
-                };
+    # get restriction types
+    my @restriction_types = Koha::Patron::Restriction::Types->search()->as_list;
 
-            my $category_code = $attr_type->category_code;
-            my ( $category_lib ) = map {
-                ( defined $category_code and $attr_type->category_code eq $category_code ) ? $attr_type->description : ()
-            } @patron_categories;
-            push @patron_attributes_codes,
-                {
-                    attribute_code => $attr_type->code,
-                    attribute_lib  => $attr_type->description,
-                    category_lib   => $category_lib,
-                    type           => $attr_type->authorised_value_category ? 'select' : 'text',
-                };
-        }
+    # get the patron attributes list
+    my @patron_attributes_values;
+    my @patron_attributes_codes;
+    my $library_id = C4::Context->userenv ? C4::Context->userenv->{'branch'} : undef;
+    my $patron_attribute_types = Koha::Patron::Attribute::Types->search_with_library_limits({}, {}, $library_id);
+    my @patron_categories = Koha::Patron::Categories->search_with_library_limits({}, {order_by => ['description']})->as_list;
+    while ( my $attr_type = $patron_attribute_types->next ) {
+        next if $attr_type->repeatable;
+        next if $attr_type->unique_id; # Don't display patron attributes that must be unqiue
+        my $options = $attr_type->authorised_value_category
+            ? GetAuthorisedValues( $attr_type->authorised_value_category )
+            : undef;
+        push @patron_attributes_values,
+            {
+                attribute_code => $attr_type->code,
+                options        => $options,
+            };
+
+        my $category_code = $attr_type->category_code;
+        my ( $category_lib ) = map {
+            ( defined $category_code and $attr_type->category_code eq $category_code ) ? $attr_type->description : ()
+        } @patron_categories;
+        push @patron_attributes_codes,
+            {
+                attribute_code => $attr_type->code,
+                attribute_lib  => $attr_type->description,
+                category_lib   => $category_lib,
+                type           => $attr_type->authorised_value_category ? 'select' : 'text',
+            };
+    }
         
+    if ( $do eq 'edit' ) {
         my $action = $cgi->param('do');
         if ( $action && $action eq 'edit' ) {
             $template->param(
                 action  => 'edit_config'
             );
         }
-        
-        my $currency = Koha::Acquisition::Currencies->get_active;
-        
-        my $dbh = C4::Context->dbh;
-        my $selectLetter = q{SELECT   code, module, name, GROUP_CONCAT(DISTINCT message_transport_type SEPARATOR ',') message_transport_type
-                             FROM     letter
-                             WHERE    module IN ('members')
-                             GROUP BY code, module, name 
-                             ORDER BY name};
-        my $letters = $dbh->selectall_arrayref($selectLetter,{ Slice => {} });
-
-        $template->param(
-            last_upgraded                     => $self->retrieve_data('last_upgraded'),
-            debit_types                       => \@debit_types,
-            restriction_types                 => \@restriction_types,
-            patron_attributes_codes           => \@patron_attributes_codes,
-            patron_attributes_values          => \@patron_attributes_values,
-            patron_lists                      => [ GetPatronLists() ],
-            library_id                        => scalar $cgi->param('library_id'),
-            category_id                       => scalar $cgi->param('category_id'),
-            currency                          => ($currency) ? $currency->symbol : '',
-            patronLetters                     => $letters
-        );
     }
+        
+    my $currency = Koha::Acquisition::Currencies->get_active;
+    
+    my $dbh = C4::Context->dbh;
+    my $selectLetter = q{SELECT   code, module, name, GROUP_CONCAT(DISTINCT message_transport_type SEPARATOR ',') message_transport_type
+                         FROM     letter
+                         WHERE    module IN ('members')
+                         GROUP BY code, module, name 
+                         ORDER BY name};
+    my $letters = $dbh->selectall_arrayref($selectLetter,{ Slice => {} });
+
+    $template->param(
+        last_upgraded                     => $self->retrieve_data('last_upgraded'),
+        debit_types                       => \@debit_types,
+        restriction_types                 => \@restriction_types,
+        patron_attributes_codes           => \@patron_attributes_codes,
+        patron_attributes_values          => \@patron_attributes_values,
+        patron_lists                      => [ GetPatronLists() ],
+        library_id                        => scalar $cgi->param('library_id'),
+        category_id                       => scalar $cgi->param('category_id'),
+        currency                          => ($currency) ? $currency->symbol : '',
+        patronLetters                     => $letters,
+        defaultStrings                    => {
+                                               letter_charge_description => 'Benachrichtigungsgebühr für [% claim.level %]. Gebührenmahnung',
+                                               letter_charge_note        => '[% claim.level %]. Gebührenmahnung vom [% today %]',
+                                               fee_note                  => '[% claim.level %]. Gebührenmahnung vom [% today %]',
+                                             },
+    );
     
     my $config = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfiguration->new();
     
@@ -162,6 +173,9 @@ sub configure {
         execution_monthes                 => $self->retrieve_data('execution_monthes') || '*',
         execution_weekdays                => $self->retrieve_data('execution_weekdays') || '*',
         execution_on_closing_days         => $self->retrieve_data('execution_on_closing_days') || 'yes',
+        account_balance_for_closing       => $self->retrieve_data('account_balance_for_closing') || '0.0',
+        unban_actions                     => $self->retrieve_data('unban_actions') || '[]',
+        do_automatic_close_on_payment     => $self->retrieve_data('do_automatic_close_on_payment') + 0, 
         configurations                    => $config->getConfigurationList()
     );
     
@@ -189,6 +203,44 @@ sub tool {
             file => 'claimHistory.tt'
         });
         $self->output_html( $template->output );
+    }
+}
+
+sub after_account_action {
+    my ($self, $args) = @_;
+    
+    my $do_automatic_close_on_payment = ($self->retrieve_data('do_automatic_close_on_payment')) + 0;
+    
+    return if (! $do_automatic_close_on_payment);
+    
+    my $line;
+    if ( exists($args->{payload}) && exists($args->{payload}->{line}) ) {
+        $line = $args->{payload}->{line};
+    }
+    if ( exists($args->{action}) && $args->{action} eq "add_credit" ) {
+        if ( $line && $line->borrowernumber ) {
+            my $dbh = C4::Context->dbh;
+            my $claim = $dbh->selectrow_hashref("SELECT * FROM lmsc_late_payment_claim WHERE borrowernumber = ?",undef,$line->borrowernumber);
+            if ( $claim ) {
+                my $patron  = Koha::Patrons->find( $line->borrowernumber );
+                if ( $patron ) {
+                    my $balance = $patron->account->balance;
+                    $balance = 0.0 if (!defined $balance);
+                    $balance += 0.0;
+                    my $checkAmount = $self->retrieve_data('account_balance_for_closing') + 0.0;
+                    if ( $balance <= $checkAmount ) {
+                        print STDERR "after_account_action: Patron ", $line->borrowernumber, " reached level to close claim\n";
+                        
+                        my $json = JSON->new->allow_nonref;
+                        my $unbanJSON = $self->retrieve_data('unban_actions') || '[]';
+                        my $unbanActions = $json->decode( $unbanJSON );
+                        
+                        my $claiming = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming->new();
+                        $claiming->closePaidLatePaymentClaim($patron,$claim,$unbanActions);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -311,6 +363,13 @@ sub install {
           CONSTRAINT `lmsc_lpcr_ibfk_2` FOREIGN KEY (`categorycode`) REFERENCES `categories` (`categorycode`) ON DELETE CASCADE ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     });
+    
+    C4::Context->dbh->do(
+                q{
+                    INSERT IGNORE INTO account_debit_types ( code, description, can_be_invoiced, can_be_sold, default_amount, is_system )
+                    VALUES ('LATE_PAYMENT_CLAIM', 'Gebührenmahnung', 1, 0, NULL, 1);
+                }
+            );
     my $dt = dt_from_string();
     $self->store_data( { last_upgraded => $dt->ymd('-') . ' ' . $dt->hms(':') } );
     

@@ -143,11 +143,12 @@ sub claimPatronsOfAllConfigurations {
         my $claimPatron = $claimPatrons->{$patron_id};
 
         if ( $claimPatron->{claim_id} ) {
-            $dbh->do("UPDATE lmsc_late_payment_claim SET branchcode = ?, categorycode = ?, level = ?",
+            $dbh->do("UPDATE lmsc_late_payment_claim SET branchcode = ?, categorycode = ?, level = ? WHERE id = ?",
                         undef,
                         $claimPatron->{library_id},
                         $claimPatron->{category_id},
-                        $claimPatron->{level});
+                        $claimPatron->{level},
+                        $claimPatron->{claim_id});
         }
         else {
             $dbh->do("INSERT INTO lmsc_late_payment_claim (borrowernumber, branchcode, categorycode, creationdate, level, state) VALUES (?,?,?,now(),?,?)",
@@ -559,5 +560,35 @@ sub getLatePaymentClaimHistory {
     return { late_payment_claims => $claimhistory, count => scalar(@$claimhistory), full_count => $count, page => $page, page_count => $page_count};    
 }
 
+sub closePaidLatePaymentClaim {
+    my $self = shift;
+    my $patron = shift;
+    my $claim = shift;
+    my $unbanActions = shift;
+    
+    my $dbh = C4::Context->dbh;
+    my $json = JSON->new->allow_nonref;
+    
+    $dbh->do("UPDATE lmsc_late_payment_claim SET branchcode = ?, categorycode = ?, state = ? WHERE id = ?",
+                        undef,
+                        $patron->branchcode,
+                        $patron->categorycode,
+                        'closed',
+                        $claim->{id});
+
+    $dbh->do("INSERT INTO lmsc_late_payment_claim_history (claim_id,action,level,amountoutstanding,ban_actions) VALUES (?,?,?,?,?)",
+                        undef,
+                        $claim->{id},
+                        'paid',
+                        $claim->{level},
+                        $patron->account->balance,
+                        $json->encode( $unbanActions )
+                        );
+                        
+    my $doActions = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::BanActions->new();
+    $doActions->executeBanActions($patron->borrowernumber,$claim->{id},$claim->{level},$unbanActions);
+
+}
+    
 1;
 
