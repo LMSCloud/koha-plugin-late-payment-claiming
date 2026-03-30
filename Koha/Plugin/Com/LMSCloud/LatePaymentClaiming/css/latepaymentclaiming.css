@@ -178,6 +178,22 @@ aside fieldset.brief label.latepayment_search_option_negate {
     }
 }
 
+#late_payment_claim_plugin_configuration #actions_for_automatic_closing .unban_actions_action_head {
+    min-width: 400px;
+}
+
+#late_payment_claim_plugin_configuration #actions_for_automatic_closing ul li {
+    list-style-type: disc;
+}
+
+#late_payment_claim_plugin_configuration label.do_automatic_close_on_payment_label {
+    margin-right: 0px;
+}
+
+#late_payment_claim_plugin_configuration #account_balance_for_closing {
+    width: 6em;
+}
+
 table#latePaymentClaimHistory tr:nth-child(2) th:nth-child(10) {
     text-align: right;
 }

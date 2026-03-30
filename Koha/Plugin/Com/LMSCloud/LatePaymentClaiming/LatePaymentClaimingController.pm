@@ -30,6 +30,7 @@ use Koha::DateUtils qw( dt_from_string );
 
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::PatronSearch;
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming;
+use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution;
 
 sub searchPatrons {
     my $c = shift->openapi->valid_input or return;
@@ -175,6 +176,51 @@ sub updateLatePaymentClaimComment {
     );
 }
 
+sub checkExecutionFrequency {
+    my $c = shift->openapi->valid_input or return;
+    
+    my $param = $c->validation->output;
+    my $day = $param->{'day'};
+    my $month = $param->{'month'};
+    my $weekday = $param->{'weekday'};
+    
+    my $executionChecker = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution->new();
+    
+    my $checkResult = $executionChecker->checkCronEntry($day,$month,$weekday);
+    
+    return $c->render(
+        status  => 200,
+        openapi => $checkResult
+    );
+}
+
+sub getNextExecutionDays {
+    my $c = shift->openapi->valid_input or return;
+    
+    my $param = $c->validation->output;
+    my $day = $param->{'day'};
+    my $month = $param->{'month'};
+    my $weekday = $param->{'weekday'};
+    my $startDate =  eval { dt_from_string( $param->{'startDate'} ); };
+    my $execOnClosingDays = $param->{'execOnClosingDays'};
+    my $execOnClosingDayLibrary = $param->{'execOnClosingDayLibrary'};
+    my $count = (($param->{'count'} || 0) + 0) || 20;
+    
+    my $executionChecker = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution->new();
+    
+    my $nextExecutionDays = $executionChecker->getNextDays($day,$month,$weekday,$startDate,$execOnClosingDays,$execOnClosingDayLibrary,$count);
+    my $dates = [];
+    
+    foreach my $date(@$nextExecutionDays) {
+        push @$dates, $date->ymd();
+    }
+    
+    return $c->render(
+        status  => 200,
+        openapi => $dates
+    );
+}
+
 sub databaseClaim2Api {
     my $claim = shift;
     
@@ -212,6 +258,8 @@ sub databaseClaim2Api {
                 account_balance => $claim->{account_balance}
             };
 }
+
+
 
 1;
 
