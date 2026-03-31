@@ -156,8 +156,7 @@ sub getConfiguration {
                 level                 => $config->{level},
                 outstanding_fee_limit => $config->{outstanding_fee_limit},
                 patron_selections     => $json->decode( $config->{patron_selections} ),
-                ban_actions           => $json->decode( $config->{ban_actions} ),
-                unban_actions         => $json->decode( $config->{unban_actions} )
+                ban_actions           => $json->decode( $config->{ban_actions} )
             };
     }
     
@@ -214,8 +213,7 @@ sub saveConfiguration {
                             level => $levelConfig->{level},
                             outstanding_fee_limit => $levelConfig->{outstanding_fee_limit},
                             patron_selections => $json->encode( $levelConfig->{patron_selections} ),
-                            ban_actions => $json->encode( $levelConfig->{ban_actions} ),
-                            unban_actions => $json->encode( $levelConfig->{unban_actions} )
+                            ban_actions => $json->encode( $levelConfig->{ban_actions} )
                         };
         
         # In order to update existing level entries initialize the where params
@@ -251,22 +249,20 @@ sub saveConfiguration {
                              UPDATE lmsc_late_payment_claim_rules
                              SET outstanding_fee_limit = ?,
                                  patron_selections = ?,
-                                 ban_actions = ?,
-                                 unban_actions = ?
+                                 ban_actions = ?
                              WHERE
                                  id = ?
                          }, undef, 
                          $savedConf->{outstanding_fee_limit},
                          $savedConf->{patron_selections},
-                         $savedConf->{ban_actions},
-                         $savedConf->{unban_actions},
+                         $savedConf->{ban_actions}
                          $savedConf->{id}
                      );
         }
         # or do an insert
         else {
             $dbh->do(q{
-                             INSERT lmsc_late_payment_claim_rules (branchcode,categorycode,level,outstanding_fee_limit,patron_selections,ban_actions,unban_actions)
+                             INSERT lmsc_late_payment_claim_rules (branchcode,categorycode,level,outstanding_fee_limit,patron_selections,ban_actions)
                              VALUES (?,?,?,?,?,?,?)
                          }, undef,
                          $savedConf->{branchcode},
@@ -274,8 +270,7 @@ sub saveConfiguration {
                          $savedConf->{level},
                          $savedConf->{outstanding_fee_limit},
                          $savedConf->{patron_selections},
-                         $savedConf->{ban_actions},
-                         $savedConf->{unban_actions}
+                         $savedConf->{ban_actions}
                      );
         }
         # delete any existing higher level entry

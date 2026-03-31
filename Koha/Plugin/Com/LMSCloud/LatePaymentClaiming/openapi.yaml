@@ -160,34 +160,6 @@ paths:
                                     - boolean
                                     - "null"
                                   description: value of the parameter
-                    unban_actions:
-                      type: array
-                      description: List of unban actions that are performed if a patron has paid the outstanding fees
-                      items:
-                        type: object
-                        properties:
-                          action:
-                            type: string
-                            description: name of the action
-                          description:
-                            type: string
-                            description: description of the action
-                          parameter:
-                            type: array
-                            description: list of action parameters
-                            items:
-                              type: object
-                              properties:
-                                parameter_name:
-                                  type: string
-                                  description: name of the parameter
-                                parameter_value:
-                                  type:
-                                    - number
-                                    - string
-                                    - boolean
-                                    - "null"
-                                  description: value of the parameter
         "400":
           description: Error etrieving the card status
           schema:
@@ -355,34 +327,6 @@ paths:
                                     - boolean
                                     - "null"
                                   description: value of the parameter
-                    unban_actions:
-                      type: array
-                      description: List of unban actions that are performed if a patron has paid the outstanding fees
-                      items:
-                        type: object
-                        properties:
-                          action:
-                            type: string
-                            description: name of the action
-                          description:
-                            type: string
-                            description: description of the action
-                          parameter:
-                            type: array
-                            description: list of action parameters
-                            items:
-                              type: object
-                              properties:
-                                parameter_name:
-                                  type: string
-                                  description: name of the parameter
-                                parameter_value:
-                                  type:
-                                    - number
-                                    - string
-                                    - boolean
-                                    - "null"
-                                  description: value of the parameter
       responses:
         "200":
           description: Successful Response
@@ -439,34 +383,6 @@ paths:
                     ban_actions:
                       type: array
                       description: List of ban actions that are performed if a patron late payment claim reaches the level
-                      items:
-                        type: object
-                        properties:
-                          action:
-                            type: string
-                            description: name of the action
-                          description:
-                            type: string
-                            description: description of the action
-                          parameter:
-                            type: array
-                            description: list of action parameters
-                            items:
-                              type: object
-                              properties:
-                                parameter_name:
-                                  type: string
-                                  description: name of the parameter
-                                parameter_value:
-                                  type:
-                                    - number
-                                    - string
-                                    - boolean
-                                    - "null"
-                                  description: value of the parameter
-                    unban_actions:
-                      type: array
-                      description: List of unban actions that are performed if a patron has paid the outstanding fees
                       items:
                         type: object
                         properties:

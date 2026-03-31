@@ -164,15 +164,14 @@ sub claimPatronsOfAllConfigurations {
         
         my ($amountoutstanding)  = $dbh->selectrow_array("SELECT SUM(amountoutstanding) FROM accountlines WHERE borrowernumber = ?", undef, $patron_id);
 
-        $dbh->do("INSERT INTO lmsc_late_payment_claim_history (claim_id, action, level, amountoutstanding, patron_selections, ban_actions, unban_actions) VALUES (?,?,?,?,?,?)",
+        $dbh->do("INSERT INTO lmsc_late_payment_claim_history (claim_id, action, level, amountoutstanding, patron_selections, ban_actions) VALUES (?,?,?,?,?,?)",
                     undef,
                     $claimPatrons->{claim_id},
                     'claimed',
                     $claimPatron->{level},
                     $amountoutstanding,
                     $json->encode( $claimPatron->{patron_selection} ),
-                    $json->encode( $claimPatron->{ban_actions} ),
-                    $json->encode( [] ));
+                    $json->encode( $claimPatron->{ban_actions} ));
         
         $doBans->executeBanActions($patron_id,$claimPatrons->{claim_id},$claimPatron->{level},$claimPatron->{ban_actions});
     }
