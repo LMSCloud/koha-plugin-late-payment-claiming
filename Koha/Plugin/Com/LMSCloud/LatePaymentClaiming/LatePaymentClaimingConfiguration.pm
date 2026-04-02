@@ -255,7 +255,7 @@ sub saveConfiguration {
                          }, undef, 
                          $savedConf->{outstanding_fee_limit},
                          $savedConf->{patron_selections},
-                         $savedConf->{ban_actions}
+                         $savedConf->{ban_actions},
                          $savedConf->{id}
                      );
         }
@@ -263,7 +263,7 @@ sub saveConfiguration {
         else {
             $dbh->do(q{
                              INSERT lmsc_late_payment_claim_rules (branchcode,categorycode,level,outstanding_fee_limit,patron_selections,ban_actions)
-                             VALUES (?,?,?,?,?,?,?)
+                             VALUES (?,?,?,?,?,?)
                          }, undef,
                          $savedConf->{branchcode},
                          $savedConf->{categorycode},
