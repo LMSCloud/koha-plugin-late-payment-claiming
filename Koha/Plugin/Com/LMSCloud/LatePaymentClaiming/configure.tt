@@ -22,7 +22,10 @@
 <body id="late_payment_claim_plugin_configuration">
 [% INCLUDE 'html_helpers.inc' %]
 [% PROCESS 'restriction-types.inc' %]
-[% INCLUDE 'cat-search.inc' %]
+
+[% WRAPPER 'header.inc' %]
+    [% INCLUDE 'patron-search-header.inc' %]
+[% END %]
 
 [% WRAPPER 'sub-header.inc' %]
     [% WRAPPER breadcrumbs %]
@@ -154,6 +157,10 @@
                                         [% END %]
                                     [% END %]
                                 </select>
+                            </li>
+                            <li>
+                                <label class="radio" for="last_run">Letzte Ausführung am:</label>
+                                <input type="hidden" name="last_run" id="last_run" value="[% last_run | html %]" />[% IF last_run %]<span id="resetStartDate">[% last_run | $KohaDates %]&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:resetStartDate()">Zurücksetzen</a></span>[% END %]
                             </li>
                             <li>
                                 <label for="generate_next_execution_days">Nächste Ausführungstage:</label>
@@ -2227,6 +2234,7 @@
     }
     
     function getNextExecutionDays() {
+        var lastrun = $('#general_settings_form input[name="last_run"]').val();
         var day = $('#general_settings_form input[name="execution_month_days"]').val();
         var month = $('#general_settings_form input[name="execution_monthes"]').val();
         var weekdays = $('#general_settings_form input[name="execution_weekdays"]').val();
@@ -2244,7 +2252,7 @@
                 options = {
                     url: '/api/v1/contrib/latepaymentclaiming/get_next_execution_days',
                     accepts: { text: "application/json" },
-                    data: { day: day, month: month, weekday: weekdays, execOnClosingDays: executionOnClosingDays, execOnClosingDayLibrary: executionOnClosingDaysLibrary }
+                    data: { startDate: lastrun, day: day, month: month, weekday: weekdays, execOnClosingDays: executionOnClosingDays, execOnClosingDayLibrary: executionOnClosingDaysLibrary }
                 };
                 $.ajax(options)
                 .then(function(result) {
@@ -2285,6 +2293,11 @@
                 modal.modal("show");
             }
         });
+    }
+    
+    function resetStartDate() {
+        $('#general_settings_form input[name="last_run"]').val('');
+        $('#resetStartDate').text('');
     }
      
     </script>

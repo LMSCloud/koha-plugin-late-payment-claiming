@@ -19,8 +19,10 @@
 </head>
 <body id="latePaymentCurrentClaims">
 [% INCLUDE 'html_helpers.inc' %]
-[% INCLUDE 'cat-search.inc' %]
 
+[% WRAPPER 'header.inc' %]
+    [% INCLUDE 'patron-search-header.inc' %]
+[% END %]
 
 [% WRAPPER 'sub-header.inc' %]
     [% WRAPPER breadcrumbs %]
@@ -119,6 +121,7 @@
                             <th>Gebüh&shy;ren&shy;stand</th>
                             <th>Selektion</th>
                             <th>Aktionen</th>
+                            <th>Mitarbeiter</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -502,11 +505,15 @@
                             readParams[params[i].name] = params[i].value;
                         }
                         
+                        var patron_id = "[% patron_id | html %]";
                         let searchParams = { 
                                                '_per_page': readParams['iDisplayLength'],
                                                '_page': (readParams['iDisplayStart'] / readParams['iDisplayLength']) + 1,
                                                'draw': readParams['sEcho'],
                                            };
+                        if ( patron_id.length > 0 && patron_id && /^\d+$/.test(patron_id) ) {
+                            searchParams['patron_id'] = patron_id;
+                        }
                         for (let i=0;i<readParams['iColumns'];i++) {
                             var field = readParams['mDataProp_' + i];
                             if ( field == 'library_id' ) field = 'library';
@@ -713,7 +720,7 @@
                             { 
                                 name: 'patron_selections_description',
                                 data: 'patron_selections_description',
-                                sWidth: "30%",
+                                sWidth: "25%",
                                 orderable: false,
                                 "render": function( data, type, row, meta ) {
                                     var selections='';
@@ -730,7 +737,7 @@
                             { 
                                 name: 'ban_actions_description',
                                 data: 'ban_actions_description',
-                                sWidth: "30%",
+                                sWidth: "25%",
                                 orderable: false,
                                 "render": function( data, type, row, meta ) {
                                     var selections='';
@@ -742,6 +749,28 @@
                                         selections += '</ul>';
                                     }
                                     return selections;
+                                }
+                            },
+                            { 
+                                name: 'manager',
+                                data: 'manager',
+                                sWidth: "10%",
+                                orderable: false,
+                                render: function( data, type, row, meta ) {
+                                    var name = '';
+                                    if ( row.manager_firstname && row.manager_firstname.length > 0 ) {
+                                        name += row.manager_firstname + " ";
+                                    }
+                                    if ( row.manager_surname && row.manager_surname.length > 0 ) {
+                                        name += row.manager_surname + " ";
+                                    }
+                                    if ( name.length > 0 ) {
+                                        name = escape_str(name);
+                                    }
+                                    if ( name.length > 0 && row.manager_patron_id && row.manager_patron_id > 0 ) {
+                                        name = '<a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=' + row.manager_patron_id + '">' + name + '</a>';
+                                    }
+                                    return name;
                                 }
                             }
                         ],
@@ -775,7 +804,7 @@
                         "sAjaxSource": '/api/v1/contrib/latepaymentclaiming/late_payment_claim_history',
                         
                         "fnServerData": function(sSource, params, fnCallback) {
-                            console.log(params);
+                            // console.log(params);
                             let readParams = {};
                             for (let i=0;i<params.length;i++) {
                                 readParams[params[i].name] = params[i].value;

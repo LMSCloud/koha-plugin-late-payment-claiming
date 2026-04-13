@@ -18,8 +18,10 @@
 </head>
 <body id="latePaymentClaimsTool">
 [% INCLUDE 'html_helpers.inc' %]
-[% INCLUDE 'cat-search.inc' %]
 
+[% WRAPPER 'header.inc' %]
+    [% INCLUDE 'patron-search-header.inc' %]
+[% END %]
 
 [% WRAPPER 'sub-header.inc' %]
     [% WRAPPER breadcrumbs %]

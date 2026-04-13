@@ -88,6 +88,7 @@ sub getLatePaymentClaims {
     
     my $parameters = {
                          claim_id => $param->{claim_id},
+                         patron_id => $param->{patron_id},
                          cardnumber => $param->{cardnumber},
                          patron => $param->{patron},
                          library => $param->{library},
@@ -106,9 +107,12 @@ sub getLatePaymentClaims {
         push @$resultClaims, databaseClaim2Api($claim);
     }
     
+    my $returnData = { data => $resultClaims, recordsFiltered => $result->{full_count}, recordsTotal => $result->{full_count} };
+    $returnData->{draw} = $param->{draw} if ( $param->{draw} );
+    
     return $c->render(
         status  => 200,
-        openapi => { data => $resultClaims, recordsFiltered => $result->{full_count}, recordsTotal => $result->{full_count}, draw => $param->{draw} }
+        openapi => $returnData
     );
 }
 

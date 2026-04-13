@@ -26,7 +26,7 @@ use Data::Dumper;
 
 use C4::Context;
 use C4::Koha qw( GetAuthorisedValues );
-use C4::Auth qw( get_template_and_user );
+use C4::Auth qw( get_template_and_user haspermission );
 
 use Koha::Acquisition::Currencies qw( get_active );
 use Koha::DateUtils qw( dt_from_string output_pref );
@@ -40,7 +40,7 @@ use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfigu
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming;
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution;
 
-our $VERSION = "0.8.0";
+our $VERSION = "0.9.0";
 our $MINIMUM_VERSION = "22.11";
 
 our $metadata = {
@@ -75,6 +75,7 @@ sub configure {
         $self->store_data(
             {
                 batch_active                      => scalar $cgi->param('batch_active'),
+                last_run                          => scalar $cgi->param('last_run'),
                 execution_month_days              => scalar $cgi->param('execution_month_days') || '*',
                 execution_monthes                 => scalar $cgi->param('execution_monthes') || '*',
                 execution_weekdays                => scalar $cgi->param('execution_weekdays') || '*',
@@ -171,6 +172,7 @@ sub configure {
     
     $template->param(
         batch_active                      => $self->retrieve_data('batch_active') || 0,
+        last_run                          => $self->retrieve_data('last_run'),
         execution_month_days              => $self->retrieve_data('execution_month_days') || '*',
         execution_monthes                 => $self->retrieve_data('execution_monthes') || '*',
         execution_weekdays                => $self->retrieve_data('execution_weekdays') || '*',
@@ -202,19 +204,84 @@ sub cronjob_nightly {
 
     my $cron = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution->new();
     
+    my $startdate = DateTime->now()->subtract(days => 1);
+    my $lastrun = $self->retrieve_data('last_run');
+    if ( $lastrun ) {
+        $startdate = dt_from_string($lastrun);
+    }
+    
     my $result = $cron->getNextDay(  
                         $execution_month_days,
                         $execution_monthes,
                         $execution_weekdays,
-                        DateTime->now()->subtract(days => 1),
+                        $startdate,
                         $execution_on_closing_days,
                         $execution_on_closing_days_library);
     if ( $result->{ok} ) {
         if ( $result->{next}->ymd('-') eq DateTime->now()->ymd('-') ) {
             my $doClaim = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming->new();
             $doClaim->claimPatronsOfAllConfigurations();
+            $self->store_data({ last_run => dt_from_string()->ymd('-') });
         }
     }
+}
+
+sub intranet_js {
+    my ( $self ) = @_;
+    
+    my $user_id = C4::Context->userenv ? C4::Context->userenv->{'id'} : undef;
+    my $canViewClaims = 0;
+    if ( $user_id && haspermission($user_id, { plugins => 'plugins_tool' }) ) {
+        $canViewClaims = 1;
+    }
+    
+    my $intranetJSadd = q^
+        <script>
+        $(document).ready( function() {
+            if ( $('#patron_messages.circmessage,#circmessages.circmessage').length > 0 ) {
+                var msgPanel = $('#patron_messages.circmessage,#circmessages.circmessage').first();
+                if ( $('input[name="borrowernumber"]').length > 0 ) {
+                    var patron = $('input[name="borrowernumber"]').first().val();
+                    if ( patron && patron.length > 0 ) {
+                        $.ajax({
+                            'dataType': 'json',
+                            'type': 'GET',
+                            'url': '/api/v1/contrib/latepaymentclaiming/late_payment_claims',
+                            'data': { patron_id: patron, status: 'current', draw: 1 },
+                            'success': function(result) {
+                                // console.log(result);
+                                if ( result && result.data && result.recordsTotal == 1 ) {
+                                    var claimDate = result.data[0].creationdate;
+                                    var level = result.data[0].level;
+                                    
+                                    if ( ! msgPanel.hasClass("attention") ) {
+                                        msgPanel.addClass("attention");
+                                    }
+                                    
+                                    var listElem;
+                                    var msgPanelHead = msgPanel.find("h3:contains('Attention'),h3:contains('Achtung')");
+                                    if ( msgPanelHead.length > 0 ) {
+                                        listElem = msgPanelHead.next('ul');
+                                    }
+                                    else {
+                                        msgPanel.prepend('<h3>Achtung</h3><ul></ul>');
+                                        msgPanelHead = msgPanel.find("h3:contains('Attention'),h3:contains('Achtung')");
+                                        listElem = msgPanelHead.next('ul');
+                                    }
+                                    if ( listElem && listElem.length > 0 ) {
+                                        listElem.prepend('<li class="charges blocker"><span class="circ-hlt">Gebührenmahnung:</span> ' + level + '. Gebührenmahnung (angemahnt seit ' + $date(claimDate) + ').^ . 
+                                        ($canViewClaims ? q^ <a href="/cgi-bin/koha/plugins/run.pl?class=Koha%3A%3APlugin%3A%3ACom%3A%3ALMSCloud%3A%3ALatePaymentClaiming&method=tool&toolaction=currentClaims&status_filter=all&patron_id=' + patron + '">Zeige Mahnfall</a>^ : '') . q^</li>');
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        });
+        </script>
+    ^;
+    return $intranetJSadd;
 }
 
 sub tool {
@@ -346,6 +413,7 @@ sub claimInteractive {
             );
         }
         elsif ( exists($result->{actionIdList}) ) {
+            $self->store_data({ last_run => dt_from_string()->ymd('-') });
             $self->claimHistory({ actionIdList => $result->{actionIdList}, actionIdCount => $result->{actionIdCount} });
             exit;
         }
@@ -368,6 +436,7 @@ sub currentClaims {
     my $cgi = $self->{cgi};
     
     my $status_filter = $cgi->param('status_filter') || '';
+    my $patron_id = $cgi->param('patron_id') || '';
     
     $status_filter = 'open' if (! $status_filter );
     $status_filter = '' if ( $status_filter eq 'all' );
@@ -381,6 +450,7 @@ sub currentClaims {
     
     $template->param( 
         status_filter => $status_filter,
+        patron_id => $patron_id,
         action => 'list',
         branches => \@branches, 
         categorylist => \@categorylist 
@@ -429,7 +499,6 @@ sub install {
           `amountoutstanding` DECIMAL(28,6) default NULL     COMMENT 'Outstanding fee at the time of the history entry',
           `patron_selections` mediumtext DEFAULT NULL        COMMENT 'Selection parameters applied to reach that level JSON format',
           `ban_actions` mediumtext NOT NULL                  COMMENT 'Ban actions performed at the level in JSON format',
-          `unban_actions` mediumtext NOT NULL                COMMENT 'Unban actions performed in JSON format',
           `timestamp` timestamp NOT NULL 
                       DEFAULT current_timestamp()            COMMENT 'The timestamp the action was performed',
           `manager_id` int(11) DEFAULT NULL                  COMMENT 'Staff member who performed the action (NULL if it was an automated action)',
@@ -451,7 +520,6 @@ sub install {
           `outstanding_fee_limit` DECIMAL(28,6) default NULL COMMENT 'Fee limit that needs to be reached for this level',
           `patron_selections` mediumtext NOT NULL            COMMENT 'Selection parameters defined in JSON format',
           `ban_actions` mediumtext NOT NULL                  COMMENT 'Ban actions to perform in JSON format',
-          `unban_actions` mediumtext NOT NULL                COMMENT 'Unban actions to perform in JSON format',
           PRIMARY KEY (`id`),
           UNIQUE KEY `lmsc_lpcr_uniq` (`branchcode`,`categorycode`,`level`),
           KEY `lmsc_lpcr_ibfk_1` (`branchcode`),

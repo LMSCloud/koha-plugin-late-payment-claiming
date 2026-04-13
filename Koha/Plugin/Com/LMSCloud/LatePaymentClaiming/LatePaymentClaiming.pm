@@ -224,6 +224,10 @@ sub getLatePaymentClaims {
         push @where, "b.cardnumber LIKE ?";
         push @params, '%' . $parameters->{cardnumber} . '%';
     }
+    if ( $parameters->{patron_id} ) {
+        push @where, "b.borrowernumber = ?";
+        push @params, $parameters->{patron_id};
+    }
     if ( $parameters->{patron} ) {
         my $sPatron = '%' . $parameters->{patron} . '%';
         push @where, "(b.surname LIKE ? OR b.firstname LIKE ? OR b.middle_name LIKE ? OR b.othernames LIKE ? OR b.address LIKE ? OR b.address2 LIKE ? OR b.city LIKE ? OR b.zipcode LIKE ? OR b.country LIKE ?)";
@@ -250,8 +254,13 @@ sub getLatePaymentClaims {
         push @params, $parameters->{level};
     }
     if ( $parameters->{status} ) {
-        push @where, "lpc.state = ?";
-        push @params, $parameters->{status};
+        if ( $parameters->{status} eq 'current' ) {
+            push @where, "lpc.state IN (?,?)";
+            push @params, 'open', 'paused';
+        } else {
+            push @where, "lpc.state = ?";
+            push @params, $parameters->{status};
+        }
     }
     if ( $parameters->{comment} ) {
         push @where, "lpc.comment LIKE ?";

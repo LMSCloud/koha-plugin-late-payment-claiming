@@ -14,7 +14,7 @@ info:
   license:
     name: GNU General Public License Version 3
     url: https://www.gnu.org/licenses/gpl-3.0.html
-  version: 0.1.0
+  version: 1.0.0
 paths:
   /configurations:
     get:
@@ -967,6 +967,11 @@ paths:
           description: Case insensitive search on patrons cardnumber
           required: false
           type: string
+        - name: patron_id
+          in: query
+          description: Case insensitive search on patrons ids
+          required: false
+          type: string
         - name: patron
           in: query
           description: Case insensitive search on patron fields
@@ -1218,7 +1223,8 @@ paths:
                 type: string
       x-koha-authorization:
         permissions:
-          plugins: plugins_tool
+          - plugins: "plugins_tool"
+          - borrowers: "edit_borrowers"
 
   /late_payment_claim/{claim_id}/comment:
     get:

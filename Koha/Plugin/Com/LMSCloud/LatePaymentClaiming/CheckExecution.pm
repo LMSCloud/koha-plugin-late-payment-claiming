@@ -57,6 +57,8 @@ sub getNextDay {
     my ($self,$dayCron,$monthCron,$weekdayCron,$start,$execOnClosingDays,$execOnClosingDayLibrary,$checkRes) = @_;
     
     my $startDate = DateTime->new(year => $start->year, month => $start->month, day => $start->day);
+    my $today = DateTime->now();
+    my $todayCompare = DateTime->new(year => $today->year, month => $today->month, day => $today->day);
     
     my $checkResult;
     if ( $checkRes ) {
@@ -77,6 +79,7 @@ sub getNextDay {
         my $cronweekday = DateTime::Event::Cron->new("0 0 * " . $month . " " . $weekday);
         
         my $nextDay;
+        
         if ( $day ne 'L' ) {
             $nextDay = $cronday->next($startDate);
         } else {
@@ -87,7 +90,7 @@ sub getNextDay {
         my $maxCycles = $self->{maxIterations};
         
         my ($checkres,$useDate) = $self->compareDatesAndCheckClosingDay($nextDay,$nextWeekday,$execOnClosingDays,$execOnClosingDayLibrary);
-        while ( $checkres != 0 && $maxCycles-- > 0 ) {
+        while ( ($checkres != 0 || $useDate < $todayCompare) && $maxCycles-- > 0 ) {
             # print "$cmpres => ", $nextDay->ymd(), " ", $nextDay->hms(), " ", $nextWeekday->ymd(), " ", , $nextDay->hms(), "\n";
             if ( $checkres == 1 ) {
                 $nextWeekday = $cronweekday->next($nextWeekday);
@@ -115,32 +118,37 @@ sub getNextDay {
         
         my $cron;
         my $nextDay;
-        if ( $day ne 'L' ) {
-            $cron = DateTime::Event::Cron->new("0 0 " . $day . " " . $month . " " . $weekday);
-            $nextDay = $cron->next($startDate);
-        } else {
-            $nextDay = $self->getNextLastDayOfMonth($startDate);
-        }
-
         
-        if ( $execOnClosingDays && $execOnClosingDayLibrary ) {
-            my $calendar = Koha::Calendar->new( branchcode => $execOnClosingDayLibrary );
-            if ( $execOnClosingDays eq 'no' ) {
-                my $maxCycles = $self->{maxIterations};
-                while ( $calendar->is_holiday($nextDay) && $maxCycles-- > 0) {
-                    if ( $day ne 'L' ) {
-                        $nextDay = $cron->next($nextDay);
-                    } else {
-                        $nextDay = $self->getNextLastDayOfMonth($nextDay);
+        while ( !$nextDay || $nextDay < $todayCompare ) {
+            if ( $day ne 'L' ) {
+                $cron = DateTime::Event::Cron->new("0 0 " . $day . " " . $month . " " . $weekday);
+                $nextDay = $cron->next($startDate);
+            } else {
+                $nextDay = $self->getNextLastDayOfMonth($startDate);
+            }
+            
+            $startDate = $nextDay;
+            
+            if ( $execOnClosingDays && $execOnClosingDayLibrary ) {
+                my $calendar = Koha::Calendar->new( branchcode => $execOnClosingDayLibrary );
+                if ( $execOnClosingDays eq 'no' ) {
+                    my $maxCycles = $self->{maxIterations};
+                    while ( $calendar->is_holiday($nextDay) && $maxCycles-- > 0) {
+                        if ( $day ne 'L' ) {
+                            $nextDay = $cron->next($nextDay);
+                        } else {
+                            $nextDay = $self->getNextLastDayOfMonth($nextDay);
+                        }
+                    }
+                }
+                elsif ( $execOnClosingDays eq 'delay' ) {
+                    my $maxCycles = $self->{maxIterations};
+                    while ( $calendar->is_holiday($nextDay) && $maxCycles-- >= 1 ) {
+                        $nextDay->add(days => 1);
                     }
                 }
             }
-            elsif ( $execOnClosingDays eq 'delay' ) {
-                my $maxCycles = $self->{maxIterations};
-                while ( $calendar->is_holiday($nextDay) && $maxCycles-- >= 1 ) {
-                    $nextDay->add(days => 1);
-                }
-            }
+            # print $nextDay->ymd('-'), " <=> ", $todayCompare->ymd('-'), "\n";
         }
         
         $checkResult->{next} = $nextDay;
@@ -229,8 +237,9 @@ sub getNextLastDayOfMonth {
 1;
 
 #my $cron = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution->new();
+#my $startDate = DateTime->new(year => 2025, month => 12, day => 31);
+#my $res = $cron->getNextDays('1-7','*','7',$startDate,'delay','Zentrale',10);
 
-#my $res = $cron->getNextDays('*','*','7',DateTime->now(),'delay','Zentrale',10);
 #foreach my $d(@$res) {
 #    print $d->dmy("."),"\n";
 #}
