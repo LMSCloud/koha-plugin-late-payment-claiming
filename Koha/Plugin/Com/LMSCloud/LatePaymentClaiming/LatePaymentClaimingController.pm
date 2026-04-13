@@ -136,6 +136,7 @@ sub getLatePaymentClaimHistory {
                          action_account_balance_to => $param->{action_account_balance_to},
                          action_timestamp_from => $param->{action_timestamp_from},
                          action_timestamp_to => $param->{action_timestamp_to},
+                         actionIdList => $param->{actionIdList}
                      };
     my $result = $lpc->getLatePaymentClaimHistory($parameters,$param->{_per_page},$param->{_page},$param->{_order_by},$param->{_search});
     
@@ -174,6 +175,35 @@ sub updateLatePaymentClaimComment {
         status  => 200,
         openapi => databaseClaim2Api($claim)
     );
+}
+
+sub insertLatePaymentClaim {
+    my $c = shift->openapi->valid_input or return;
+    
+    my $param = $c->validation->output;
+    my $body = $c->validation->param('body');
+    
+    my $cardnumber = $body->{cardnumber};
+    my $level = $body->{level};
+    my $comment = $body->{comment};
+    
+    my $lpc = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming->new();
+
+    my $result = {};
+    
+    $result = $lpc->insertLatePaymentClaim($cardnumber,$level,$comment);
+    
+    if ( !exists($result->{error}) && $result->{claim} ) {
+        return $c->render(
+            status  => 200,
+            openapi => databaseClaim2Api($result->{claim})
+        );
+    }
+    
+    return $c->render(
+            status  => 400,
+            openapi => { detail => $result->{error} }
+        );
 }
 
 sub checkExecutionFrequency {

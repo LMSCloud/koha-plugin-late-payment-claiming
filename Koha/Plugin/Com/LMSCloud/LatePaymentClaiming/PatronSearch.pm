@@ -49,7 +49,7 @@ sub getPatronList {
     if ($patrons->count) {
         while ( my $patron = $patrons->next ) {
             next if exists( $checkid->{$patron->borrowernumber} );
-            push @$patronList, { patron_id => $patron->borrowernumber, library_id => $patron->branchcode, category_id => $patron->categorycode };
+            push @$patronList, { patron => $patron, patron_id => $patron->borrowernumber, library_id => $patron->branchcode, category_id => $patron->categorycode };
             $checkid->{$patron->borrowernumber} = 1;
         }
     }

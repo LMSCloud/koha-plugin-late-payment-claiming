@@ -40,14 +40,14 @@ use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfigu
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming;
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution;
 
-our $VERSION = "0.7.0";
+our $VERSION = "0.8.0";
 our $MINIMUM_VERSION = "22.11";
 
 our $metadata = {
     name            => 'Gebührenmahnung',
     author          => 'LMSCloud GmbH',
     date_authored   => '2026-02-15',
-    date_updated    => "2026-04-02",
+    date_updated    => "2026-04-13",
     minimum_version => $MINIMUM_VERSION,
     maximum_version => undef,
     version         => $VERSION,
@@ -230,6 +230,9 @@ sub tool {
     elsif ( $toolaction && $toolaction eq 'currentClaims' ) {
         $self->currentClaims();
     }
+    elsif ( $toolaction && $toolaction eq 'claimInteractive' ) {
+        $self->claimInteractive();
+    }
     else {
         my $template = $self->get_template({
             file => 'claimHistory.tt'
@@ -261,7 +264,7 @@ sub after_account_action {
                     $balance += 0.0;
                     my $checkAmount = $self->retrieve_data('account_balance_for_closing') + 0.0;
                     if ( $balance <= $checkAmount ) {
-                        print STDERR "after_account_action: Patron ", $line->borrowernumber, " reached level to close claim\n";
+                        # print STDERR "after_account_action: Patron ", $line->borrowernumber, " reached level to close claim\n";
                         
                         my $json = JSON->new->allow_nonref;
                         my $unbanJSON = $self->retrieve_data('unban_actions') || '[]';
@@ -284,15 +287,77 @@ sub claimHistory {
         file => 'claimHistory.tt'
     });
     
+    my $actionIdList = $cgi->param('actionIdList');
+    if (!$actionIdList && $args && exists( $args->{actionIdList} ) ) {
+        $actionIdList = $args->{actionIdList};
+    }
+    my $searchIDs = '';
+    if ( $actionIdList ) {
+        my @checkList = split(/,/,$actionIdList);
+        foreach my $listEntry(@checkList) {
+            if ( $listEntry !~ /^\s*([0-9]+)\s*-\s*([0-9]+)\s*$/ && $listEntry !~ /^\s*([0-9]+)\s*$/ ) {
+                $actionIdList = '';
+            }
+        }
+        $template->param(actionIdList => $actionIdList) if ( $actionIdList );
+    }
+    if ( $args && exists( $args->{actionIdCount} ) ) {
+        $template->param(actionIdCount => $args->{actionIdCount})
+    }
+    
     my @branches = map { value => $_->branchcode, label => $_->branchname }, Koha::Libraries->search_filtered({ -or => [ mobilebranch => undef, mobilebranch => '' ] }, { order_by => 'branchname' })->as_list;
     my @categorylist = map { value => $_->categorycode, label => $_->description }, Koha::Patron::Categories->search({}, {order_by => ['description']})->as_list;
     
     $template->param( 
         action => 'list',
         branches => \@branches, 
-        categorylist => \@categorylist 
+        categorylist => \@categorylist
     );
 
+    $self->output_html( $template->output );
+    exit;
+}
+
+sub claimInteractive {
+    my ($self, $args) = @_;
+
+    my $cgi = $self->{cgi};
+    my $countClaimsLimit = 100;
+    
+    my $start = $cgi->param('do') || '';
+    
+    my $template = $self->get_template({
+        file => 'claimInteractive.tt'
+    });
+    
+    $template->param( countClaimsLimit => $countClaimsLimit );
+    
+    if ( $start eq 'start' ) {
+        my $doClaim = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming->new();
+        my $result = $doClaim->executeClaiming($countClaimsLimit);
+        
+        if ( exists($result->{error}) ) {
+            my $toClaim = $doClaim->getClaimCases();
+            
+            $template->param( 
+                error => $result->{error},
+                errorText => $result->{errorText},
+                patronsToClaim => $toClaim
+            );
+        }
+        elsif ( exists($result->{actionIdList}) ) {
+            $self->claimHistory({ actionIdList => $result->{actionIdList}, actionIdCount => $result->{actionIdCount} });
+            exit;
+        }
+    } else {
+        my $doClaim = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming->new();
+        my $toClaim = $doClaim->getClaimCases();
+        
+        $template->param( 
+            patronsToClaim => $toClaim
+        );
+    }
+    
     $self->output_html( $template->output );
     exit;
 }

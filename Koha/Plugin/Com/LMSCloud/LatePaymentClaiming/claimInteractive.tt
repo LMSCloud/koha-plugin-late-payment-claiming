@@ -1,0 +1,266 @@
+[% USE raw %]
+[% USE Asset %]
+[% USE KohaDates %]
+[% USE AuthorisedValues %]
+[% USE Categories %]
+[% USE Branches %]
+[% USE JSON.Escape %]
+[% USE Koha %]
+[% USE Price %]
+[% SET footerjs = 1 %]
+
+[% PROCESS 'patron-search.inc' %]
+
+[% INCLUDE 'doc-head-open.inc' %]
+ <title>Koha: Gebührenmahnung Plugin: Interaktives Mahnen</title>
+[% INCLUDE 'doc-head-close.inc' %]
+<link rel="stylesheet" type="text/css" href="/api/v1/contrib/latepaymentclaiming/static/css/latepaymentclaiming.css" />
+</head>
+<body id="latePaymentClaimsTool">
+[% INCLUDE 'html_helpers.inc' %]
+[% INCLUDE 'cat-search.inc' %]
+
+
+[% WRAPPER 'sub-header.inc' %]
+    [% WRAPPER breadcrumbs %]
+        [% WRAPPER breadcrumb_item %]
+            <a href="/cgi-bin/koha/tools/tools-home.pl">Werkzeuge</a>
+        [% END %]
+        [% WRAPPER breadcrumb_item %]
+            <a href="/cgi-bin/koha/plugins/run.pl?class=Koha%3A%3APlugin%3A%3ACom%3A%3ALMSCloud%3A%3ALatePaymentClaiming&method=tool">Werkzeuge für Gebührenmahnvorgänge</a>
+        [% END %]
+        [% WRAPPER breadcrumb_item bc_active= 1 %]
+            <span>Interaktives Mahnen</span>
+        [% END %]
+    [% END #/ WRAPPER breadcrumbs %]
+[% END #/ WRAPPER sub-header.inc %]
+
+
+<div class="main container-fluid">
+    <div class="row">
+        <div class="col-sm-12">
+            <main>
+                <h1>Gebührenmahnung: Interaktives Mahnen</h1>
+                [% IF error %]
+                    [% IF error == "limitError" %]
+                        <div class="alert alert-danger">
+                            Es wurden mehr als <strong>[% countClaimsLimit | html %]</strong> anstehenden Gebührenmahnungen gefunden.
+                        </div>
+                    [% ELSIF error == "executionError" %]
+                        <div class="alert alert-danger">
+                            Fehler bei der Ausführung der Gebührenmahnung: <br/>
+                            [% errorText | html %]
+                        </div>
+                    [% ELSE %]
+                        <div class="alert alert-danger">
+                            Fehler bei der Ausführung der Gebührenmahnung: <br/>
+                            [% error | html %][% IF errorText %]: [% errorText | html %][% END %]
+                        </div>
+                    [% END %]
+                [% END %]
+                [% IF patronsToClaim %]
+                    <p>
+                        Mit dieser Funktion können Sie anstehende Gebührenmahnungen prüfen und gegebenenfalls durchführen.
+                        Nachfolgende Tabelle listet alle anstehenden Gebührenmahnfälle der Selektion für die neue Mahnstufe und den durchzuführenden Aktionen auf.
+                    </p>
+                    <p>
+                        Es können maximal <strong>[% countClaimsLimit | html %]</strong> Gebührenmahnungen interaktiv durchgeführt werden.
+                        <br/>
+                        Bei mehr als [% countClaimsLimit %] anstehenden Gebührenmahnungen müssen die Gebührenmahnungen im Tageslauf durchgeführt werden.
+                    </p>
+                    [% IF patronsToClaim.size > 0 && patronsToClaim.size <= patronsToClaim %]
+                    <form method="get" id="start_claiming_action">
+                        <input type="hidden" name="class" value="[% CLASS %]"/>
+                        <input type="hidden" name="method" value="[% METHOD %]"/>
+                        <input type="hidden" name="do" value="start"/>
+                        <input type="hidden" name="toolaction" value="claimInteractive"/>
+                        
+                        <input type="submit" value="Anstehende Gebührenmahnungen durchführen"/>
+                    </form>
+                    [% END %]
+                    
+                    <table id="patronsToClaim" class="table table-striped dt-responsive">
+                        <thead>
+                            <tr>
+                                <th>Mahn&shy;stufe</th>
+                                <th>Benutzer</th>
+                                <th>Ausweisnummer</th>
+                                <th>Bibliothek</th>
+                                <th>Kate&shy;gorie</th>
+                                <th>Gebüh&shy;ren&shy;stand</th>
+                                <th>Selektion</th>
+                                <th>Aktion(en)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            [% FOREACH patronToClaim IN patronsToClaim %]
+                            <tr>
+                                [% patron = patronToClaim.patron %]
+                                <td class="latepaypemnt_claim_list_centercol">
+                                    [% patronToClaim.level | html %]
+                                </td>
+                                <td>
+                                    <a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=[% patron.borrowernumber | html %]" title="Bearbeiten" class="patron_name">[% patron.surname | html %][% IF patron.firstname %], [% patron.firstname | html %][% END %]</a>
+                                </td>
+                                <td>
+                                    <a href="/cgi-bin/koha/circ/circulation.pl?borrowernumber=[% patron.borrowernumber | html %]" title="Ausleihen" class="patron_name" style="white-space:pre-wrap;word-break:break-all;hyphens:auto;overflow-wrap:break-word;">[% patron.cardnumber | html %]</a>
+                                </td>
+                                <td>
+                                    [% Branches.GetName(patronToClaim.library_id) | html %]
+                                </td>
+                                <td>
+                                    [% Categories.GetName(patronToClaim.category_id) | html %]
+                                </td>
+                                <td class="latepaypemnt_claim_list_rightcol">
+                                    <span class='debit'>
+                                        <strong>
+                                        [% patron.account.balance | $Price %]
+                                        </strong>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="show_patron_selection_details">
+                                        <a class="btn btn-default btn-xs"><i class="fa fa-eye"></i> Anzeigen</a>
+                                        <div class="latepayment_userselection_list" style="display:none">
+                                            <ul>
+                                                [% FOREACH selection IN patronToClaim.patron_selection %]
+                                                <li>
+                                                    [% selection.description | html %]
+                                                </li>
+                                                [% END %]
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="show_ban_action_details">
+                                        <a class="btn btn-default btn-xs"><i class="fa fa-eye"></i> Anzeigen</a>
+                                        <div  class="latepayment_banaction_list" style="display:none">
+                                            <ul>
+                                                [% FOREACH action IN patronToClaim.ban_actions %]
+                                                <li>
+                                                    [% action.description | html %]
+                                                </li>
+                                                [% END %]
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            [% END %]
+                        </tbody>
+                    </table>
+                [% ELSE %]
+                <div class="alert alert-warning">
+                    Es wurden anhand der aktuellen Gebührenmahnkonfiguration keine im Moment durchzuführenden Gebührenmahnungen gefunden.
+                </div>
+                [% END %]
+            </main>
+        </div>
+    </div>
+</div>
+
+<!-- Show selection details -->
+<div class="modal" id="show_selections" tabindex="-1" role="dialog" aria-labelledby="show_selections_details_title">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="show_selections_details_title">Selektionen</h4>
+            </div>
+            <div class="modal-body">
+                <legend id="show_selection_details_legend">Selektionen für die Gebührenmahnung:</legend>
+                <div id="showSelectionsDetail">
+                
+                </div>
+            </div> <!-- /.modal-body -->
+            <div class="modal-footer">
+                <form id="show_selections_actions">
+                    <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                </form>
+            </div> <!-- /.modal-footer -->
+        </div> <!-- /.modal-content -->
+    </div> <!-- /.modal-dialog -->
+</div> <!-- /.modal -->
+
+<!-- Show ban action details -->
+<div class="modal" id="show_banactions" tabindex="-1" role="dialog" aria-labelledby="show_banactions_details_title">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="show_banactions_details_title">Aktionen</h4>
+            </div>
+            <div class="modal-body">
+                <legend id="show_banactions_details_legend">Aktionen für die Gebührenmahnung:</legend>
+                <div id="showBanactionsDetail">
+                
+                </div>
+            </div> <!-- /.modal-body -->
+            <div class="modal-footer">
+                <form id="show_selections_actions">
+                    <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                </form>
+            </div> <!-- /.modal-footer -->
+        </div> <!-- /.modal-content -->
+    </div> <!-- /.modal-dialog -->
+</div> <!-- /.modal -->
+
+[% MACRO jsinclude BLOCK %]
+    [% INCLUDE 'calendar.inc' %]
+    [% INCLUDE 'datatables.inc' %]
+    [% INCLUDE 'select2.inc' %]
+    [% Asset.js("lib/jquery/plugins/jquery.dataTables.columnFilter.js") | $raw %]
+    <script>
+        $(document).ready(function() {
+            var claimList = $("#patronsToClaim").dataTable($.extend(true, {}, dataTablesDefaults, {
+                    'serverSide': false,
+                    'deferRender': true,
+                    'paging': true,
+                    'pageLength': 20,
+                    'lengthMenu': [10, 20, 50, 100, 500, 1000],
+                    'pagingType': 'full_numbers',
+                    'processing': true,
+                    "buttons": [{
+                        fade: 100,
+                        className: "dt_button_clear_filter",
+                        titleAttr: __('Suche leeren'),
+                        enabled: false,
+                        text: '<i class="fa fa-lg fa-remove"></i> <span class="dt-button-text">' + __('Suche leeren') + '</span>',
+                        action: function ( e, dt, node ) {
+                            dt.search( "" ).draw("page");
+                            node.addClass("disabled");
+                        }
+                    }],
+                    "order": [[ 0, "asc" ],[ 1, "asc" ]],
+                    "oLanguage": {
+                        "sSearch":         "Suchen: ",
+                        "sEmptyTable":     "Keine anstehenden Gebührenmahnungen gefunden",
+                        "sInfo":           "Zeige _START_ bis _END_ von _TOTAL_ anstehenden Gebührenmahnungen",
+                        "sInfoEmpty":      "Zeige 0 bis 0 von 0 anstehende Gebührenmahnungen",
+                        "sInfoFiltered":   "(gefiltert von _MAX_ anstehenden Gebührenmahnungen gesamt)",
+                        "sLengthMenu":     "Zeige _MENU_ anstehende Gebührenmahnungen",
+                        "oPaginate": {
+                            "sFirst":      "Erste",
+                            "sLast":       "Letzte",
+                            "sNext":       "Nächste",
+                            "sPrevious":   "Vorige"
+                        },
+                    },
+                    drawCallback: function (settings) {
+                        $('.show_patron_selection_details a').click(function() {
+                            $('#showSelectionsDetail').html('<ul>'+$(this).parent().find('ul').html()+'</ul>');
+                            var modal = $("#show_selections");
+                            modal.modal("show");
+                        });
+                        $('.show_ban_action_details a').click(function() {
+                            $('#showBanactionsDetail').html('<ul>'+$(this).parent().find('ul').html()+'</ul>');
+                            var modal = $("#show_banactions");
+                            modal.modal("show");
+                        } );
+                    }
+                }));
+        });
+    </script>
+[% END %]
+[% INCLUDE 'intranet-bottom.inc' %]

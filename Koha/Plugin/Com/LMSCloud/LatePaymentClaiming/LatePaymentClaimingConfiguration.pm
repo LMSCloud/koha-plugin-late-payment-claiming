@@ -241,7 +241,7 @@ sub saveConfiguration {
             $savedConf->{id} = $id;
         }
         
-        print STDERR Dumper($savedConf);
+        # print STDERR Dumper($savedConf);
         
         # if we can do an update ...
         if ( exists($savedConf->{id}) ) {

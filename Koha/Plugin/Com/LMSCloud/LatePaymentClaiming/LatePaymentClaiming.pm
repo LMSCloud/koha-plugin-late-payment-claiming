@@ -23,6 +23,7 @@ use Data::Dumper;
 use Clone 'clone';
 use Try::Tiny qw(try catch);
 use JSON;
+use Carp;
 
 use C4::Context;
 use C4::Scrubber;
@@ -76,7 +77,17 @@ sub getClaimPatrons {
     my $claimPatrons = {};
     
     my $dbh = C4::Context->dbh;
-    my $sth = $dbh->prepare("SELECT id,level,state,branchcode,categorycode FROM lmsc_late_payment_claim WHERE borrowernumber = ? and state <> 'closed'");
+    my $sth = $dbh->prepare(
+            q{ 
+                SELECT id,
+                       level,
+                       state,
+                       branchcode,
+                       categorycode 
+                FROM   lmsc_late_payment_claim 
+                WHERE 
+                       borrowernumber = ? AND state <> 'closed'
+             });
     
     # check each configuration
     foreach my $configuration(@$configurations) {
@@ -88,7 +99,7 @@ sub getClaimPatrons {
                 # check each patron selection
                 foreach my $patronSelection( @{$levelConfiguration->{patron_selections}} ) {
                     my $patrons = $patronSearch->getPatronList($configuration->{library_id},$configuration->{category_id},$levelConfiguration->{level},$patronSelection);
-                    print scalar(@$patrons), " patrons found\n";
+                    # print scalar(@$patrons), " patrons found\n";
                     foreach my $patron(@$patrons) {
                         # check whether the patron already exists
                         next if ( exists($claimPatrons->{$patron->{patron_id}}) );
@@ -111,6 +122,7 @@ sub getClaimPatrons {
                             $claim_id = $id;
                         }
                         $claimPatrons->{$patron->{patron_id}} = {
+                                                                    patron => $patron->{patron},
                                                                     claim_id => $claim_id,
                                                                     level => $levelConfiguration->{level},
                                                                     library_id => $patron->{library_id},
@@ -118,9 +130,9 @@ sub getClaimPatrons {
                                                                     patron_selection => $patronSelection,
                                                                     ban_actions => $levelConfiguration->{ban_actions}
                                                                  };
-                        print $configuration->{library_id}," ",$configuration->{category_id}," ",$levelConfiguration->{level}," ",$patron->{patron_id},"\n";
+                        # print $configuration->{library_id}," ",$configuration->{category_id}," ",$levelConfiguration->{level}," ",$patron->{patron_id},"\n";
                     }
-                    print scalar(keys %$claimPatrons), " patrons remain\n";
+                    # print scalar(keys %$claimPatrons), " patrons remain\n";
                 }
             }
         }
@@ -130,14 +142,19 @@ sub getClaimPatrons {
 
 sub claimPatronsOfAllConfigurations {
     my $self = shift;
+    my $claimPatrons = shift;
     
-    my $configurations = clone($self->{configurations});
-    my $claimPatrons = $self->getClaimPatrons($configurations);
+    if (! $claimPatrons ) {
+        my $configurations = clone($self->{configurations});
+        $claimPatrons = $self->getClaimPatrons($configurations);
+    }
     
     my $dbh = C4::Context->dbh;
     my $json = JSON->new->allow_nonref;
     
     my $doBans = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::BanActions->new();
+    
+    my $IdList = [];
     
     foreach my $patron_id(sort { $claimPatrons->{$a}->{level} <=> $claimPatrons->{$b}->{level} } keys %$claimPatrons) {
         my $claimPatron = $claimPatrons->{$patron_id};
@@ -159,22 +176,31 @@ sub claimPatronsOfAllConfigurations {
                         $claimPatron->{level},
                         'open');
             my $claim_id = $dbh->{mysql_insertid};
-            $claimPatrons->{claim_id} = $claim_id;
+            $claimPatron->{claim_id} = $claim_id;
         }
         
         my ($amountoutstanding)  = $dbh->selectrow_array("SELECT SUM(amountoutstanding) FROM accountlines WHERE borrowernumber = ?", undef, $patron_id);
 
-        $dbh->do("INSERT INTO lmsc_late_payment_claim_history (claim_id, action, level, amountoutstanding, patron_selections, ban_actions) VALUES (?,?,?,?,?,?)",
+        my $userenv = C4::Context->userenv();
+        my $usernumber = (ref($userenv) eq 'HASH') ? $userenv->{'number'} : undef;
+        
+        $dbh->do("INSERT INTO lmsc_late_payment_claim_history (claim_id, action, level, amountoutstanding, patron_selections, ban_actions, manager_id) VALUES (?,?,?,?,?,?,?)",
                     undef,
-                    $claimPatrons->{claim_id},
+                    $claimPatron->{claim_id},
                     'claimed',
                     $claimPatron->{level},
                     $amountoutstanding,
                     $json->encode( $claimPatron->{patron_selection} ),
-                    $json->encode( $claimPatron->{ban_actions} ));
+                    $json->encode( $claimPatron->{ban_actions} ),
+                    $usernumber);
+        my $claim_action_id = $dbh->{mysql_insertid};
         
-        $doBans->executeBanActions($patron_id,$claimPatrons->{claim_id},$claimPatron->{level},$claimPatron->{ban_actions});
+        $doBans->executeBanActions($patron_id,$claimPatron->{claim_id},$claimPatron->{level},$claimPatron->{ban_actions});
+        
+        push @$IdList, $claim_action_id;
     }
+    
+    return $IdList;
 }
 
 sub getLatePaymentClaims {
@@ -305,6 +331,61 @@ sub getLatePaymentClaimComment {
     return $comment;
 }
 
+sub insertLatePaymentClaim {
+    my $self = shift;
+    my $cardnumber = shift;
+    my $level = shift;
+    my $comment = shift;
+    
+    # Basic checks
+    return { error => "cardNumberMissing" } if (! $cardnumber);
+    return { error => "levelMissing"  } if (! $level);
+    
+    my $dbh = C4::Context->dbh;
+    
+    my $patron = Koha::Patrons->find({ cardnumber => $cardnumber });
+    return { error => "wrongCardNumber" } if (! $patron);
+    
+    my ($amountoutstanding) = $dbh->selectrow_array("SELECT SUM(amountoutstanding)+0.0 FROM accountlines WHERE borrowernumber=?",undef,$patron->borrowernumber);
+    return { error => "noOutstandingFee" } if (!$amountoutstanding || $amountoutstanding == 0.0);
+    
+    # check whether the patron was already activly claimed
+    my ($activeClaims) = $dbh->selectrow_array("SELECT count(*) FROM lmsc_late_payment_claim WHERE borrowernumber = ? AND state IN ('open','paused')",undef,$patron->borrowernumber);
+    return { error => "activeClaimsExist" } if ( $activeClaims);
+    
+    $dbh->do("INSERT INTO lmsc_late_payment_claim (borrowernumber, branchcode, categorycode, creationdate, level, state, comment) VALUES (?,?,?,now(),?,?,?)",
+                    undef,
+                    $patron->borrowernumber,
+                    $patron->branchcode,
+                    $patron->categorycode,
+                    $level,
+                    'open',
+                    $comment);
+    my $claim_id = $dbh->{mysql_insertid};
+
+    my $userenv = C4::Context->userenv();
+    my $usernumber = (ref($userenv) eq 'HASH') ? $userenv->{'number'} : undef;
+    
+    $dbh->do("INSERT INTO lmsc_late_payment_claim_history (claim_id, action, level, comment, amountoutstanding, manager_id) VALUES (?,?,?,?,?,?)",
+                undef,
+                $claim_id,
+                'added',
+                $level,
+                $comment,
+                $amountoutstanding,
+                $usernumber
+                );
+                
+    # SELECT the changed late claim with additional data
+    my $sql = "SELECT lpc.*,lpc.state AS status,b.*,(SELECT SUM(amountoutstanding) FROM accountlines a WHERE a.borrowernumber=lpc.borrowernumber) AS account_balance FROM lmsc_late_payment_claim lpc JOIN borrowers b ON (lpc.borrowernumber = b.borrowernumber) WHERE lpc.id = ?";
+    my $sth = $dbh->prepare($sql);
+    $sth->execute($claim_id);
+    
+    my $insertedClaim = $sth->fetchrow_hashref;
+    
+    return { claim => $insertedClaim };
+}
+
 sub updateLatePaymentClaim {
     my $self = shift;
     my $claim_id = shift;
@@ -358,7 +439,10 @@ sub updateLatePaymentClaim {
     my $updatedClaim = $sth->fetchrow_hashref;
     
     if ( scalar(@fields) && $action && $action =~ /^(comment|open|pause|close|reopen)$/) {
-        $dbh->do("INSERT INTO lmsc_late_payment_claim_history (claim_id,action,level,comment,amountoutstanding) VALUES (?,?,?,?,?)",undef,$claim_id,$action,$updatedClaim->{level},$comment,$updatedClaim->{account_balance});
+        my $userenv = C4::Context->userenv();
+        my $usernumber = (ref($userenv) eq 'HASH') ? $userenv->{'number'} : undef;
+        
+        $dbh->do("INSERT INTO lmsc_late_payment_claim_history (claim_id,action,level,comment,amountoutstanding,manager_id) VALUES (?,?,?,?,?,?)",undef,$claim_id,$action,$updatedClaim->{level},$comment,$updatedClaim->{account_balance},$usernumber);
     }
     
     return $updatedClaim;
@@ -445,6 +529,25 @@ sub getLatePaymentClaimHistory {
     if ( $parameters->{action_timestamp_to} ) {
         push @where, "DATE(hist.timestamp) <= ?";
         push @params, $parameters->{action_timestamp_to};
+    }
+    if ( $parameters->{actionIdList} ) {
+        my @addParams;
+        my @addWhere;
+        my @checkList = split(/,/,$parameters->{actionIdList});
+        foreach my $listEntry(@checkList) {
+            if ( $listEntry =~ /^\s*([0-9]+)\s*-\s*([0-9]+)\s*$/ ) {
+                push @addWhere, "hist.id BETWEEN ? AND ?";
+                push @addParams, $1, $2;
+            } 
+            elsif ( $listEntry =~ /^\s*([0-9]+)\s*$/ ) {
+                push @addWhere, "hist.id = ?";
+                push @addParams, $1;
+            }
+        }
+        if ( scalar(@addWhere) ) {
+            push @where, "( " . join(" OR ",@addWhere) . ") ";
+            push @params, @addParams;
+        }
     }
     if ( $searchAll ) {
         my $searchAllTrunc = '%' . $searchAll . '%';
@@ -541,7 +644,7 @@ sub getLatePaymentClaimHistory {
     
     my $claimhistory = [];
     while ( my $claimhist = $sth->fetchrow_hashref ) {
-        print STDERR Dumper($claimhist);
+        # print STDERR Dumper($claimhist);
         if ( $claimhist->{patron_selections_description} ) {
             $claimhist->{patron_selections_description} = $json->decode( $claimhist->{patron_selections_description} );
         }
@@ -575,18 +678,102 @@ sub closePaidLatePaymentClaim {
                         'closed',
                         $claim->{id});
 
-    $dbh->do("INSERT INTO lmsc_late_payment_claim_history (claim_id,action,level,amountoutstanding,ban_actions) VALUES (?,?,?,?,?)",
+    my $userenv = C4::Context->userenv();
+    my $usernumber = (ref($userenv) eq 'HASH') ? $userenv->{'number'} : undef;
+    
+    $dbh->do("INSERT INTO lmsc_late_payment_claim_history (claim_id,action,level,amountoutstanding,ban_actions,manager_id) VALUES (?,?,?,?,?,?)",
                         undef,
                         $claim->{id},
                         'paid',
                         $claim->{level},
                         $patron->account->balance,
-                        $json->encode( $unbanActions )
+                        $json->encode( $unbanActions ),
+                        $usernumber
                         );
                         
     my $doActions = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::BanActions->new();
     $doActions->executeBanActions($patron->borrowernumber,$claim->{id},$claim->{level},$unbanActions);
 
+}
+
+sub executeClaiming {
+    my $self = shift;
+    my $limitCount = shift;
+    
+    my $error;
+    my $errorString;
+    my $result = {};
+    
+    my $configurations = clone($self->{configurations});
+    my $claimPatrons = $self->getClaimPatrons($configurations);
+    
+    if ( $limitCount && $limitCount >= scalar(keys %$claimPatrons) ) {
+        eval {
+            my $actionIdList = $self->claimPatronsOfAllConfigurations($claimPatrons);
+            my $shortIdList = shortenIdList(@$actionIdList);
+            $result->{actionIdList} = $shortIdList;
+            $result->{actionIdCount} = scalar(keys %$claimPatrons);
+        };
+        if ( $@ ) {
+            $result->{error} = 'executionError';
+            $result->{errorText} = $@;
+        }
+    } else {
+        $result->{error} = 'limitError';
+        $result->{errorText} = 'too much patrons found';
+    }
+    
+    return $result;
+}
+
+sub getClaimCases {
+    my $self = shift;
+    my $limitCount = shift;
+    
+    my $configurations = clone($self->{configurations});
+    my $claimPatrons = $self->getClaimPatrons($configurations);
+    
+    my $patronsToClaim = [];
+    foreach my $patronId(sort {
+                                      $claimPatrons->{$a}->{level} == $claimPatrons->{$b}->{level} ? 
+                                          (
+                                            (($claimPatrons->{$a}->{patron}->surname || '') . ($claimPatrons->{$a}->{patron}->firstname || ''))
+                                            cmp
+                                            (($claimPatrons->{$b}->{patron}->surname || '') . ($claimPatrons->{$b}->{patron}->firstname || ''))
+                                          ) :
+                                          ($claimPatrons->{$a}->{level} <=> $claimPatrons->{$b}->{level})
+                                   } keys %$claimPatrons)
+    {
+        push @$patronsToClaim, $claimPatrons->{$patronId};
+    }
+
+    return $patronsToClaim;
+}
+
+sub shortenIdList {
+    my @idList = @_;
+    my $shortenedList = '';
+    
+    my $cnt = scalar(@idList);
+    if ( $cnt ) {
+        @idList = sort { $a <=> $b } @idList;
+        my $start = $idList[0];
+        my $curr = $idList[0];
+        for (my $i=1;$i<=$cnt;$i++) {
+            if ( $i<$cnt && $idList[$i] == $curr + 1 ) {
+                $curr++;
+            }
+            else {
+                $shortenedList .= ',' if ( $shortenedList );
+                ($start != $curr) ? ($shortenedList .= "$start-$curr") : ($shortenedList .= "$start");
+                
+                $start = $idList[$i];
+                $curr = $idList[$i];
+            }
+        }
+    }
+    
+    return $shortenedList;
 }
     
 1;

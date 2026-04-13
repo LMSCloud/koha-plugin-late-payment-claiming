@@ -68,10 +68,21 @@
                         </dd>
                     </dl>
                         
-                        
+                    <dl>
+                        <dt><a href="/cgi-bin/koha/plugins/run.pl?class=Koha%3A%3APlugin%3A%3ACom%3A%3ALMSCloud%3A%3ALatePaymentClaiming&method=tool&toolaction=claimInteractive">Interaktives Mahnen</a></dt>
+                        <dd>
+                             Interaktives Starten des Mahnvorganges anhand der festgelegten Gebührenmahnkonfiguration.
+                        </dd>
+                    </dl>
                     
                 [% ELSIF action == 'list' %]
                     <h1>Gebührenmahnhistorie</h1>
+                    
+                    [% IF actionIdCount %]
+                    <div class="alert alert-success">
+                        Es wurden [% actionIdCount | html %] Gebührenmahnungen durchgeführt.
+                    </div>
+                    [% END %]
 
                     <table id="latePaymentClaimHistory" class="table table-striped dt-responsive">
                         <thead>
@@ -165,10 +176,10 @@
     [% INCLUDE 'select2.inc' %]
     [% Asset.js("lib/jquery/plugins/jquery.dataTables.columnFilter.js") | $raw %]
     <script>
-    
-    
         [% IF action == 'list' %]
         
+            var actionIdList = '[% actionIdList | html %]';
+
             function fnCreateDateRangeInput(oTable) {
                 // console.log("fnCreateDateRangeInput",oTable);
                 var th = $('#latePaymentClaimsHitory thead tr:nth-child(2) th:nth-child(6)');
@@ -220,7 +231,7 @@
                             'sWidth': "10%",
                             'render': function ( data, type, row, meta ) {
                                  let patron_id = encodeURIComponent(row.patron_id);
-                                 return "<a href=\"/cgi-bin/koha/circ/circulation.pl?borrowernumber=" + patron_id + "\" title=\"Check out\" class=\"patron_name\" data-borrowernumber=\"" + patron_id + "\" style=\"white-space:pre-wrap;word-break:break-all;hyphens:auto;overflow-wrap:break-word;\">" + escape_str(data) + "</a>";
+                                 return "<a href=\"/cgi-bin/koha/circ/circulation.pl?borrowernumber=" + patron_id + "\" title=\"Ausleihen\" class=\"patron_name\" data-borrowernumber=\"" + patron_id + "\" style=\"white-space:pre-wrap;word-break:break-all;hyphens:auto;overflow-wrap:break-word;\">" + escape_str(data) + "</a>";
                              }         
                         },
                         {
@@ -229,7 +240,7 @@
                             'sWidth': "15%",
                              render: function ( data, type, row, meta ) {
                                  let patron_id = encodeURIComponent(row.patron_id);
-                                 let r = "<a href=\"/cgi-bin/koha/members/moremember.pl?borrowernumber=" + patron_id + "\" class=\"patron_name\" data-borrowernumber=\"" + patron_id + "\" style=\"white-space:pre-wrap;word-break:break-all;hyphens:auto;overflow-wrap:break-word;\">" + $patron_to_html(row, { invert_name: 1 }) + "</a>";
+                                 let r = "<a href=\"/cgi-bin/koha/members/moremember.pl?borrowernumber=" + patron_id + "\" title=\"Bearbeiten\"  class=\"patron_name\" data-borrowernumber=\"" + patron_id + "\" style=\"white-space:pre-wrap;word-break:break-all;hyphens:auto;overflow-wrap:break-word;\">" + $patron_to_html(row, { invert_name: 1 }) + "</a>";
                                  return r;
                              }
                         },
@@ -262,15 +273,15 @@
                                 var actionName;
                                 switch (data) {
                                     case "claimed":   actionName = row.level + ". Mahnung"; break;
-                                    case "comment": actionName = "Kommentiert"; break;
-                                    case "pause":   actionName = "Pausiert"; break;
-                                    case "close":   actionName = "Abgeschlossen"; break;
-                                    case "reopen":  actionName = "Reaktiviert"; break;
+                                    case "comment": actionName = "Kommen&shy;tiert"; break;
+                                    case "pause":   actionName = "Pau&shy;siert"; break;
+                                    case "close":   actionName = "Abge&shy;chlos&shy;sen"; break;
+                                    case "reopen":  actionName = "Reakti&shy;viert"; break;
                                     case "paid":    actionName = "Gebühr beglichen"; break;
                                     case "added":    actionName = "Mahnfall erfasst"; break;
                                     default: actionName = data;
                                 }
-                                return escape_str(actionName);
+                                return actionName;
                             }
                         },
                            { 
@@ -437,6 +448,9 @@
                         if ( readParams['sSearch'].length > 0 ) {
                             searchParams['_search'] = readParams['sSearch'];
                         }
+                        if ( actionIdList.length > 0 ) {
+                            searchParams['actionIdList'] = actionIdList;
+                        }
                         searchParams['_order_by'] = sortFields.join(",");
                         $.ajax({
                             'dataType': 'json',
@@ -475,7 +489,7 @@
                     ]
                 });
                 
-                claimList.api().columns.adjust().draw();
+                // claimList.api().columns.adjust().draw();
 
                 $('input#latePaymentClaimHistory_range_from_1,input#latePaymentClaimHistory_range_to_1').change(function (event) {
                     event.target._flatpickr.close();

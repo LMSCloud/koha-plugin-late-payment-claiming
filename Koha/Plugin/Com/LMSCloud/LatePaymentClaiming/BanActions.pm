@@ -69,7 +69,7 @@ sub executeBanActions {
     
     $ban_actions = [ (sort { $sortHelp->{$a->{action}} <=> $sortHelp->{$b->{action}} } @$ban_actions) ];
     
-    print Dumper($ban_actions);
+    # print Dumper($ban_actions);
     
     my $dbh = C4::Context->dbh;
     

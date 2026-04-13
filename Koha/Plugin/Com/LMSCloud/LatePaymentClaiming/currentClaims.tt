@@ -42,19 +42,25 @@
         <div class="col-sm-12">
             <main>
 
-               <h1>Mahnfälle</h1>
-
+                <h1>Mahnfälle</h1>
+                
                 <p>
-                    Zeige 
+                    <a href="javascript:addClaimManually()" id="addClaimManually"><i class="fa fa-plus"></i> Mahnfall ergänzen</a>
+                     &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+                    Zeige
                         <a href="/cgi-bin/koha/plugins/run.pl?class=Koha%3A%3APlugin%3A%3ACom%3A%3ALMSCloud%3A%3ALatePaymentClaiming&method=tool&toolaction=currentClaims&status_filter=open">[% IF status_filter == 'open' %]<strong>laufende</strong>[% ELSE %]laufende[% END %]</a>
-                        |
+                        /
                         <a href="/cgi-bin/koha/plugins/run.pl?class=Koha%3A%3APlugin%3A%3ACom%3A%3ALMSCloud%3A%3ALatePaymentClaiming&method=tool&toolaction=currentClaims&status_filter=paused">[% IF status_filter == 'paused' %]<strong>pausierende</strong>[% ELSE %]pausierende[% END %]</a>
-                        |
+                        /
                         <a href="/cgi-bin/koha/plugins/run.pl?class=Koha%3A%3APlugin%3A%3ACom%3A%3ALMSCloud%3A%3ALatePaymentClaiming&method=tool&toolaction=currentClaims&status_filter=closed">[% IF status_filter == 'closed' %]<strong>abgeschlossene</strong>[% ELSE %]abgeschlossene[% END %]</a>
-                        |
+                        /
                         <a href="/cgi-bin/koha/plugins/run.pl?class=Koha%3A%3APlugin%3A%3ACom%3A%3ALMSCloud%3A%3ALatePaymentClaiming&method=tool&toolaction=currentClaims&status_filter=all">[% IF status_filter == '' %]<strong>alle</strong>[% ELSE %]alle[% END %]</a>
-                        Mahnfälle
+                        Mahnfälle  
                 </p>
+                
+                <div class="alert alert-success show-late-payment-add-success" style="display:none; margin-top:15px">
+                    Der Mahnfall wurde erfolgreich angelegt.
+                </div>
 
                 <table id="latePaymentClaimsList" class="table table-striped dt-responsive">
                     <thead>
@@ -128,7 +134,7 @@
     </div> <!-- /.modal-dialog -->
 </div> <!-- /.modal -->
 
-<!-- Actions setup -->
+<!-- actions setup -->
 <div class="modal" id="change_late_payment_claim" tabindex="-1" role="dialog" aria-labelledby="change_late_payment_claim_title">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -143,8 +149,7 @@
                         <ol class="radio">
                             <li>
                                 <label class="radio" for="change_late_payment_claim_comment">Kommentar:</label>
-                                <textarea id="change_late_payment_claim_comment" data-action="comment" data-claim_id="" rows="8" cols="50">
-                                </textarea>
+                                <textarea id="change_late_payment_claim_comment" data-action="comment" data-claim_id="" rows="8" cols="50"></textarea>
                             </li>
                         </ol>
                     </fieldset>
@@ -159,6 +164,55 @@
         </div> <!-- /.modal-content -->
     </div> <!-- /.modal-dialog -->
 </div> <!-- /.modal -->
+
+<!-- add claim manually -->
+<div class="modal" id="add_late_payment_claim" tabindex="-1" role="dialog" aria-labelledby="add_late_payment_claim_title">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="add_late_payment_claim_title">Mahnfall ergänzen</h4>
+            </div>
+            <div class="modal-body">
+                <div class="add_late_payment_claim_form">
+                    <form id="add_late_payment_claim_form">
+                        <fieldset class="rows">
+                            <legend id="add_late_payment_claim_legend">Mahnfall ergänzen</legend>
+                            <p>Sie können manuell einen Mahnfall ergänzen. Dabei werden keine zusätzlichen Aktionen durchgeführt.</p>
+                            <ol class="radio">
+                                <li>
+                                    <label class="radio" for="add_late_payment_claim_cardnumber">Ausweisnummer:</label>
+                                    <input type="text" id="add_late_payment_claim_cardnumber" name="add_late_payment_claim_cardnumber" maxlength="50"/>
+                                </li>
+                                <li>
+                                    <label class="radio" for="add_late_payment_claim_level">Mahnstufe:</label>
+                                    <select id="add_late_payment_claim_level" name="add_late_payment_claim_level">
+                                        <option value="1">Mahnstufe 1</option>
+                                        <option value="2">Mahnstufe 2</option>
+                                        <option value="3">Mahnstufe 3</option>
+                                        <option value="4">Mahnstufe 4</option>
+                                        <option value="5">Mahnstufe 5</option>
+                                    </select>
+                                </li>
+                                <li>
+                                    <label class="radio" for="change_late_payment_claim_comment">Kommentar:</label>
+                                    <textarea id="add_late_payment_claim_comment" data-action="comment" data-claim_id="" rows="8" cols="35"></textarea>
+                                </li>
+                            </ol>
+                        </fieldset>
+                    </form>
+                </div>
+                <div id="add_late_payment_claim_error" class="alert alert-danger"></div>
+            </div> <!-- /.modal-body -->
+            <div class="modal-footer">
+                <form id="action_add_late_payment_claim">
+                    <button type="submit" id="add_late_payment_claim_action_text" class="btn btn-default approve">Hinzufügen</button>
+                    <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                </form>
+            </div> <!-- /.modal-footer -->
+        </div> <!-- /.modal-content -->
+    </div> <!-- /.modal-dialog -->
+</div> <!-- /.modal -->
     
 [% MACRO jsinclude BLOCK %]
     [% INCLUDE 'calendar.inc' %]
@@ -167,6 +221,7 @@
     [% Asset.js("lib/jquery/plugins/jquery.dataTables.columnFilter.js") | $raw %]
     <script>
         [% IF action == 'list' %]
+            var claimList;
             var claimHistory;
             
             $("#action_change_late_payment_claim").on("submit",function(event) {
@@ -182,10 +237,10 @@
                     changeClaimStateAndComment(action,true,claim_id,'',comment,"");
                 }
                 else if ( action == 'pause' ) {
-                    changeClaimStateAndComment(action,false,claim_id,'pause',comment,"pausierend");
+                    changeClaimStateAndComment(action,false,claim_id,'paused',comment,"pausierend");
                 }
                 else if ( action == 'close' ) {
-                    changeClaimStateAndComment(action,false,claim_id,'close',comment,"abgeschlossen");
+                    changeClaimStateAndComment(action,false,claim_id,'closed',comment,"abgeschlossen");
                 }
                 else if ( action == 'reopen' ) {
                     changeClaimStateAndComment(action,false,claim_id,'open',comment,"laufend");
@@ -208,10 +263,7 @@
                 };
                 $.ajax(options)
                 .then(function(result) {
-                    $('#late_payment_claim_comment_' + claim_id).text(escape_str(result.comment));
-                    if ( only_comment == false ) {
-                        $('#late_payment_claim_status_' + claim_id).text(escape_str(statusName));
-                    }
+                    claimList.api().ajax.reload();
                     modal.modal("hide");
                 });
             }
@@ -258,8 +310,17 @@
                 flatpickr("#latePaymentClaimsList_range_to_4", {  });
             }
             
+            function addClaimManually() {
+                $("#add_late_payment_claim_error").hide();
+                $('#add_late_payment_claim_comment').val('');
+                $('#add_late_payment_claim_cardnumber').val('');
+                $('#add_late_payment_claim_level').val('1');
+                var modal = $("#add_late_payment_claim");
+                modal.modal("show");
+            }
+            
             var statusFilter = "[% status_filter | html %]";
-            var claimList;
+            
             $(document).ready(function() {
                 claimList = $("#latePaymentClaimsList").dataTable($.extend(true, {}, dataTablesDefaults, {
                     'serverSide': true,
@@ -496,12 +557,66 @@
                     ]
                 });
                 
-                claimList.api().columns.adjust().draw();
+                // claimList.api().columns.adjust().draw();
 
                 $('input#latePaymentClaimsList_range_from_4,input#latePaymentClaimsList_range_to_4').change(function (event) {
                     event.target._flatpickr.close();
                     $(".clear_date").first().focus();
                     claimList.api().columns.adjust().draw();
+                });
+                
+                $("#action_add_late_payment_claim").on("submit",function(event) {
+                    event.preventDefault();
+
+                    var comment    = $('#add_late_payment_claim_comment').val();
+                    var level      = $('#add_late_payment_claim_level').val();
+                    var cardnumber = $('#add_late_payment_claim_cardnumber').val();
+
+                    var data = { 'cardnumber': cardnumber, 'level': level, 'comment': comment };
+                    let options = {
+                        type: 'POST',
+                        url: '/api/v1/contrib/latepaymentclaiming/late_payment_claim',
+                        data: JSON.stringify(data),
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        success: function(response) {
+                            $('.show-late-payment-add-success').css('display','block');
+                            setTimeout(function() {
+                                $('.show-late-payment-add-success').css('display','none');
+                            }, 3000);
+                            var modal = $("#add_late_payment_claim");
+                            modal.modal("hide");
+                            claimList.api().ajax.reload();
+                        },
+                        error: function(xhr, status, error) {
+                            // console.log(xhr, status, error);
+                            var $errorText = '<span>Beim Anlegen des Mahnfalls ist ein Fehler aufgetreten.</span>';
+                            if ( xhr.status == 400 ) {
+                                var response = xhr.responseJSON;
+                                if ( response['detail'] ) {
+                                    switch (response['detail']) {
+                                        case 'cardNumberMissing': 
+                                            $errorText += '<br><span class="specificError">Es wurde keine gültige Ausweisnummer angegeben.</span>';
+                                            break;
+                                        case 'levelMissing':
+                                            $errorText += '<br><span class="specificError">Es wurde keine gültige Mahnstufe angegeben.</span>';
+                                            break;
+                                        case 'wrongCardNumber':
+                                            $errorText += '<br><span class="specificError">Zur angegebenen Ausweisnummer "' + cardnumber + '" wurde kein Benutzer gefunden.</span>';
+                                            break;
+                                        case 'noOutstandingFee':
+                                            $errorText += '<br><span class="specificError">Der Benutzer mit der Ausweisnummer "' + cardnumber + '" hat keine überfälligen Gebühren.</span>';
+                                            break;
+                                        case 'activeClaimsExist':
+                                            $errorText += '<br><span class="specificError">Der Benutzer mit der Ausweisnummer "' + cardnumber + '" ist bereits ein aktiver Mahnfall.</span>';
+                                            break;
+                                    }
+                                }
+                            }
+                            $("#add_late_payment_claim_error").html($errorText).show();
+                        }
+                    };
+                    $.ajax(options);
                 });
             });
                         
@@ -546,15 +661,15 @@
                                     var actionName;
                                     switch (data) {
                                         case "claimed":   actionName = row.level + ". Mahnung"; break;
-                                        case "comment": actionName = "Kommentiert"; break;
-                                        case "pause":   actionName = "Pausiert"; break;
-                                        case "close":   actionName = "Abgeschlossen"; break;
-                                        case "reopen":  actionName = "Reaktiviert"; break;
+                                        case "comment": actionName = "Kommen&shy;tiert"; break;
+                                        case "pause":   actionName = "Pau&shy;siert"; break;
+                                        case "close":   actionName = "Abge&shy;schlos&shy;sen"; break;
+                                        case "reopen":  actionName = "Reakti&shy;viert"; break;
                                         case "paid":    actionName = "Gebühr beglichen"; break;
                                         case "added":    actionName = "Mahnfall erfasst"; break;
                                         default: actionName = data;
                                     }
-                                    return escape_str(actionName);
+                                    return actionName;
                                 }
                             },
                             { 

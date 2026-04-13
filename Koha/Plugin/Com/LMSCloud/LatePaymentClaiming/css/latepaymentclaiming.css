@@ -61,6 +61,26 @@
     width: 17%;
 }
 
+#add_late_payment_claim fieldset.rows ol.radio label.radio, #add_late_payment_claim  fieldset.rows label {
+    width: 10em;
+}
+
+#add_late_payment_claim_form fieldset {
+    float: none;
+}
+
+#add_late_payment_claim_form fieldset.rows {
+    padding: 0em;
+}
+
+#add_late_payment_claim_error {
+    margin-top: 2em;
+}
+
+.specificError {
+    font-weight: bold;
+}
+
 fieldset.rows ol.radio label.radio,
 fieldset.rows label
 {
@@ -124,6 +144,10 @@ aside fieldset.brief label.latepayment_search_option_negate {
 
 .latepaypemnt_claim_list_rightcol {
     text-align: right;
+}
+
+.latepaypemnt_claim_list_centercol {
+    text-align: center;
 }
 
 #latePaymentClaimsTool table .filter_column > input[type="text"],
