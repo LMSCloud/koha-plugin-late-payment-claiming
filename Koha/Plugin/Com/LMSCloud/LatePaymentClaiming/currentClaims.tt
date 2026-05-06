@@ -70,7 +70,7 @@
                             <th>Mahn&shy;fall</th>
                             <th>Ausweis&shy;nummer</th>
                             <th>Benut&shy;zer</th>
-                            <th>Gebüh&shy;ren</th>
+                            <th class="latepaypemnt_claim_list_rightcol" style="white-space: nowrap;">Gebüh&shy;ren</th>
                             <th>Auswahl Bibliothek</th>
                             <th>Auswahl Kategorie</th>
                             <th class="latepaypemnt_claim_list_rightcol" style="white-space: nowrap;">Datum</th>
@@ -356,7 +356,7 @@
                         {
                             'name': 'patron',
                             'data': 'patron',
-                            'width': "20%",
+                            'width': "15%",
                              render: function ( data, type, row, meta ) {
                                  let patron_id = encodeURIComponent(row.patron_id);
                                  let r = '';
@@ -378,7 +378,7 @@
                         { 
                             name: 'account_balance',
                             data: 'account_balance',
-                            width: "5%",
+                            width: "10%",
                             "render": function( data, type, row, meta ) {
                                 let r = "<span style='text-align: right; display: block;'><a href=\"/cgi-bin/koha/members/boraccount.pl?borrowernumber="+row.patron_id+"\">";
                                 let balance_str = row.account_balance || 0;
@@ -553,11 +553,11 @@
                         { 'type': 'text' },
                         { 'type': 'text' },
                         { 'type': 'text' },
-                        { 'type': 'text' },
+                        { 'type': 'number-range' },
                         { 'type': 'select', 'values': [% branches.json %] },
                         { 'type': 'select', 'values': [% categorylist.json %]  },
                         { 'type': 'date-range' },
-                        { 'type': 'select', 'values': [{"label":"1. Mahnung","value":"claim1"},{"label":"2. Mahnung","value":"claim2"},{"label":"3. Mahnung","value":"claim3"},{"label":"4. Mahnung","value":"claim4"},{"label":"5. Mahnung","value":"claim5"}] },
+                        { 'type': 'select', 'values': [{"label":"1. Mahnung","value":"1"},{"label":"2. Mahnung","value":"2"},{"label":"3. Mahnung","value":"3"},{"label":"4. Mahnung","value":"4"},{"label":"5. Mahnung","value":"5"}] },
                         { 'type': 'select', 'selected': statusFilter, 'values': [{"label":"laufend","value":"open"},{"label":"abgeschlossen","value":"closed"},{"label":"pausierend","value":"paused"}] },
                         { 'type': 'text' },
                         null

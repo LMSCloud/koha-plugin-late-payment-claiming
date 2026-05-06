@@ -21,6 +21,7 @@ use utf8;
 use Data::Dumper;
 
 use C4::Context;
+use C4::Scrubber;
 use JSON;
 
 use Koha::Libraries;
@@ -31,6 +32,8 @@ sub new {
 
     my $self  = {};
     bless $self, $class;
+    
+    $self->{scrubber} = C4::Scrubber->new();
 
     return $self;
 }
@@ -205,6 +208,14 @@ sub saveConfiguration {
     }
     
     foreach my $levelConfig( sort { $a->{level} <=> $b->{level} } @{$config->{level_configuration}} ) {
+        
+        foreach my $action ( @{$levelConfig->{ban_actions}} ) {
+            foreach my $parameter ( @{$action->{parameter}} ) {
+                if ( $parameter->{parameter_name} =~ /^(letter_charge_note|letter_charge_description|fee_description|fee_note|debarement_comment|set_field_borrowernotes|set_field_opacnote|set_field_attribute_value)/ && $parameter->{parameter_value}) {
+                    $parameter->{parameter_value} = $self->{scrubber}->scrub($parameter->{parameter_value});
+                }
+            }
+        }
         
         # Build the values we are going to save
         my $savedConf = {

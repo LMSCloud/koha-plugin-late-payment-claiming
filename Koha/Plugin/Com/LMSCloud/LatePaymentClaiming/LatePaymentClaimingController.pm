@@ -85,7 +85,7 @@ sub getLatePaymentClaims {
     
     my $param = $c->validation->output;
     my $lpc = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming->new();
-    
+
     my $parameters = {
                          claim_id => $param->{claim_id},
                          patron_id => $param->{patron_id},
@@ -97,7 +97,8 @@ sub getLatePaymentClaims {
                          creationdate_to => $param->{creationdate_to},
                          level => $param->{level},
                          status => $param->{status},
-                         comment => $param->{comment}
+                         comment => $param->{comment},
+                         account_balance => $param->{account_balance}
                      };
     my $result = $lpc->getLatePaymentClaims($parameters,$param->{_per_page},$param->{_page},$param->{_order_by});
     

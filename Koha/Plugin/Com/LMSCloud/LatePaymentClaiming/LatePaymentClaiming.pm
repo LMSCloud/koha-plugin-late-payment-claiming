@@ -266,6 +266,26 @@ sub getLatePaymentClaims {
         push @where, "lpc.comment LIKE ?";
         push @params, '%' . $parameters->{comment} . '%';
     }
+    if ( $parameters->{account_balance} ) {
+        my ($account_balance_from,$account_balance_to) = split(/~/,$parameters->{account_balance},2);
+        $account_balance_from =~ s/[,]/./ if ($account_balance_from);
+        $account_balance_to =~ s/[,]/./ if ($account_balance_to);
+        
+        $account_balance_from = '' if ( $account_balance_from && $account_balance_from !~ /[0-9]+(\.[0-9]+)?/ );
+        $account_balance_to = '' if ( $account_balance_to && $account_balance_to !~ /[0-9]+(\.[0-9]+)?/ );
+        if ( $account_balance_from && $account_balance_to ) {
+            push @where, "(SELECT SUM(amountoutstanding) FROM accountlines a WHERE a.borrowernumber=lpc.borrowernumber) BETWEEN ? AND ?";
+            push @params, $account_balance_from, $account_balance_to;
+        }
+        elsif ( $account_balance_from  ) {
+            push @where, "(SELECT SUM(amountoutstanding) FROM accountlines a WHERE a.borrowernumber=lpc.borrowernumber) >= ?";
+            push @params, $account_balance_from;
+        }
+        elsif ( $account_balance_to  ) {
+            push @where, "(SELECT SUM(amountoutstanding) FROM accountlines a WHERE a.borrowernumber=lpc.borrowernumber) <= ?";
+            push @params, $account_balance_to;
+        }
+    }
     my $sqlcount = "SELECT count(*) FROM lmsc_late_payment_claim lpc JOIN borrowers b ON (lpc.borrowernumber = b.borrowernumber)";
     my $sqlfetch = q{
                         SELECT  lpc.*,

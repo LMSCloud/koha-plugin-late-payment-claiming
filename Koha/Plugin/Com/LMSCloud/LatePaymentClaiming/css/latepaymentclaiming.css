@@ -183,6 +183,10 @@ aside fieldset.brief label.latepayment_search_option_negate {
     align-items: center;
 }
 
+#latePaymentClaimsList_range_from_3,#latePaymentClaimsList_range_to_3 {
+    width: 4em;
+}
+
 @media screen and (max-width: 1400px) {
 
     #latePaymentCurrentClaims table#latePaymentClaimsList thead tr:nth-child(2) th:nth-child(5) .select_filter {

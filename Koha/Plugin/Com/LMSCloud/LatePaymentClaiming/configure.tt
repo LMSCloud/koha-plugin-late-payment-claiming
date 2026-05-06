@@ -1673,11 +1673,17 @@
         modal.modal("show");
     }
     
+    function stripHtml(unsafe) {
+        return $($.parseHTML(unsafe)).text();
+    }
+    
     function getSearchParams(searchfields) {
         var searchfields = [];
         var description;
         if ( $("#latepayment_search_claim_filter").val().length > 0 )
         {
+            $("#latepayment_search_claimdays_filter").val(stripHtml($("#latepayment_search_claimdays_filter").val()));
+            
             var description = 'Gebührenmahnstufe (' + 
                                 $("#latepayment_search_claim_filter option:selected").text() +
                                 ') erreicht' ;
@@ -1696,6 +1702,8 @@
         }
         if ( $("#latepayment_search_patron_filter").val().trim().length > 0 )
         {
+            $("#latepayment_search_patron_filter").val(stripHtml($("#latepayment_search_patron_filter").val()));
+            
             var description = 'Benutzerdatenfeld (' + 
                                 $("#latepayment_search_patron_field_filter option:selected").text()  + ') ' + 
                                 $("#latepayment_search_patron_searchtype_filter option:selected").text()  + ' ' + 
@@ -1751,7 +1759,7 @@
         {
             var description = 'Benutzer hat ausstehende Gebühren in Höhe';
             if ( $("#latepayment_search_chargesfrom_filter").val().trim().length > 0 )
-                description += " von " + $("#latepayment_search_chargesfrom_filter").val().trim() + " " + currency;
+                description += " von mindestens " + $("#latepayment_search_chargesfrom_filter").val().trim() + " " + currency;
             if ( $("#latepayment_search_chargesto_filter").val().trim().length > 0 )
                 description += " bis " + $("#latepayment_search_chargesto_filter").val().trim() + " " + currency;
             if ( $("#latepayment_search_charges_filter_negate").prop('checked') == true )
@@ -1870,6 +1878,9 @@
         var action = {};
         var description ='';
         if ( $("a[data-tabname='action_claim_tab'").parent().hasClass("active") ) {
+            $("#late_payment_claim_action_letter_charge_description").val(stripHtml($("#late_payment_claim_action_letter_charge_description").val()));
+            $("#late_payment_claim_action_letter_charge_note").val(stripHtml($("#late_payment_claim_action_letter_charge_note").val()));
+            
             description = 'Sende Benachrichtigung "' + 
                           $("#late_payment_claim_action_letter option:selected").text() + 
                           '" mit bevorzugter Versandart "' + 
@@ -1894,6 +1905,9 @@
                      };
         }
         else if ( $("a[data-tabname='action_fee_tab'").parent().hasClass("active") ) {
+            $("#late_payment_claim_action_fee_description").val(stripHtml($("#late_payment_claim_action_fee_description").val()));
+            $("#late_payment_claim_action_fee_note").val(stripHtml($("#late_payment_claim_action_fee_note").val()));
+            
             description = 'Erhebe eine Gebühr "' + 
                           $("#late_payment_claim_action_fee_debit_type option:selected").text() + 
                           '" in Höhe von ' + $("#late_payment_claim_action_fee_amount").val() + " " + currency + " ";
@@ -1913,6 +1927,9 @@
                      };
         }
         else if ( $("a[data-tabname='action_debarement_tab'").parent().hasClass("active") ) {
+            $("#late_payment_claim_action_debarement_comment").val(stripHtml($("#late_payment_claim_action_debarement_comment").val()));
+            $("#late_payment_claim_action_debarement_expiration").val(stripHtml($("#late_payment_claim_action_debarement_expiration").val()));
+            
             if ( $("#late_payment_claim_action_debarement_type").length > 0 ) {
                 description = 'Füge eine neue Sperre des Typs "' + 
                               $("#late_payment_claim_action_debarement_type option:selected").text() + 
@@ -1953,6 +1970,10 @@
                      };
         }
         else if ( $("a[data-tabname='action_user_value_tab'").parent().hasClass("active") ) {
+            $("#late_payment_claim_action_set_field_borrowernotes").val(stripHtml($("#late_payment_claim_action_set_field_borrowernotes").val()));
+            $("#late_payment_claim_action_set_field_opacnote").val(stripHtml($("#late_payment_claim_action_set_field_opacnote").val()));
+            $("#late_payment_claim_action_set_field_attribute_value").val(stripHtml($("#late_payment_claim_action_set_field_attribute_value").val()));
+            
             if ( $("#late_payment_claim_action_set_field_categorycode").val().length > 0 ) {
                 if ( description.length > 0 ) description += ", ";
                 description += 'den Benutzertyp auf "' + $("#late_payment_claim_action_set_field_categorycode option:selected").text() + '"';

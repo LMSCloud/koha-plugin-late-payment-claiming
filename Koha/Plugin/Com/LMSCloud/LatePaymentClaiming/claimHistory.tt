@@ -66,7 +66,7 @@
                         <dt><a href="/cgi-bin/koha/plugins/run.pl?class=Koha%3A%3APlugin%3A%3ACom%3A%3ALMSCloud%3A%3ALatePaymentClaiming&method=tool&toolaction=claimHistory">Gebührenmahnhistorie</a></dt>
                         <dd>
                              Mit diese Funktion werden bisher erfolgte Gebührenmahnvorgänge aufgelistet.
-                             Die Gebührenmahnhistorie kann gzielt gefiltert werden.
+                             Die Gebührenmahnhistorie kann gezielt gefiltert werden.
                         </dd>
                     </dl>
                         

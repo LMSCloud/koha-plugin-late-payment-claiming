@@ -217,7 +217,7 @@ sub buildSearchParams {
                     @params = ($selection->{search_from} + 0.0);
                 }
                 elsif ( $selection->{search_to} && $selection->{search_to} =~ /^[0-9]+(\.+[0-9]+)?$/ ) {
-                    $q = '( EXISTS (SELECT 1 FROM accountlines a WHERE a.borrowernumber = me.borrowernumber GROUP BY a.borrowernumber HAVING SUM(a.amountoutstanding) >= ?)';
+                    $q = '( EXISTS (SELECT 1 FROM accountlines a WHERE a.borrowernumber = me.borrowernumber GROUP BY a.borrowernumber HAVING SUM(a.amountoutstanding) <= ?)';
                     $q .= "OR NOT EXISTS (SELECT 1 FROM accountlines aa WHERE aa.borrowernumber = me.borrowernumber) " if ( ($selection->{search_to} + 0.0) == 0.0 );
                     $q .= " )";
                     @params = ($selection->{search_to} + 0.0);

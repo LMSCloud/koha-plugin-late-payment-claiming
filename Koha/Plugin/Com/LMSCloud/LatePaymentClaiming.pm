@@ -40,18 +40,18 @@ use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfigu
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming;
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution;
 
-our $VERSION = "0.9.0";
+our $VERSION = "1.0.0";
 our $MINIMUM_VERSION = "22.11";
 
 our $metadata = {
     name            => 'Gebührenmahnung',
     author          => 'LMSCloud GmbH',
     date_authored   => '2026-02-15',
-    date_updated    => "2026-04-13",
+    date_updated    => "2026-06-06",
     minimum_version => $MINIMUM_VERSION,
     maximum_version => undef,
     version         => $VERSION,
-    description     => 'Koha Plugin zur automatisierten Durchführung von Gebührenmahnungen anhand konfigurierbarer Benutzerselektionen udn Aktionen für jede Mahnstufe',
+    description     => 'Koha Plugin zur automatisierten Durchführung von Gebührenmahnungen anhand konfigurierbarer Benutzerselektionen und Aktionen für jede Mahnstufe',
 };
 
 sub new {
