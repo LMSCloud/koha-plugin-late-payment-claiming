@@ -2212,7 +2212,12 @@
     }
     
     function resetActionParams() {
-        $("#late_payment_claim_action_letter")[0].selectedIndex = 0;
+        var hasLetter = !! $('#late_payment_claim_action_letter > option[value="LATE_PAYMENT_CLAIM"]').length;
+        if ( hasLetter )
+            $("#late_payment_claim_action_letter").val('LATE_PAYMENT_CLAIM');
+        else 
+            $("#late_payment_claim_action_letter")[0].selectedIndex = 0;
+        updateLetterTransportType($('select[name="late_payment_claim_action_letter"]'));
         // $("#late_payment_claim_action_letter_transport_type")[0].selectedIndex = 0;
         $("#late_payment_claim_action_letter_charge_description").val('[% defaultStrings.letter_charge_description | html %]');
         $("#late_payment_claim_action_letter_charge_note").val('[% defaultStrings.letter_charge_note | html %]');
