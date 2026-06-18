@@ -1930,7 +1930,9 @@
             $("#late_payment_claim_action_debarement_comment").val(stripHtml($("#late_payment_claim_action_debarement_comment").val()));
             $("#late_payment_claim_action_debarement_expiration").val(stripHtml($("#late_payment_claim_action_debarement_expiration").val()));
             
+            var debarmentType = '';
             if ( $("#late_payment_claim_action_debarement_type").length > 0 ) {
+                debarmentType = $("#late_payment_claim_action_debarement_type").val();
                 description = 'Füge eine neue Sperre des Typs "' + 
                               $("#late_payment_claim_action_debarement_type option:selected").text() + 
                               '" mit dem Kommentar "' + $("#late_payment_claim_action_debarement_comment").val() + '" zu"';
@@ -1944,7 +1946,7 @@
             action = {
                          name: "debarement",
                          params: {
-                             debarement_type: $("#late_payment_claim_action_debarement_type").val(),
+                             debarement_type: debarmentType,
                              debarement_comment: $("#late_payment_claim_action_debarement_comment").val(),
                              debarement_expiration: $("#late_payment_claim_action_debarement_expiration").val()
                          },
@@ -1952,10 +1954,12 @@
                      };
         }
         else if ( $("a[data-tabname='action_debarement_delete_tab'").parent().hasClass("active") ) {
+            var delete_debarement_types = '';
             if ( $("#late_payment_claim_action_delete_debarement_all").prop('checked') ) {
                 description = 'Lösche alle Sperren';
             }
             else if ( $("#late_payment_claim_action_delete_debarement_type").prop('checked') ) {
+				delete_debarement_types  = $("#late_payment_claim_action_delete_debarement_types").val();
                 description = 'Lösche Sperren des Typs "' +
                           $("#late_payment_claim_action_delete_debarement_types option:selected").text() + '"';
             }
@@ -1963,7 +1967,7 @@
                          name: "delete_debarement",
                          params: {
                              delete_debarement_type: $("#late_payment_claim_action_delete_debarement_type").prop('checked'),
-                             delete_debarement_types: $("#late_payment_claim_action_delete_debarement_types").val(),
+                             delete_debarement_types: delete_debarement_types,
                              delete_debarement_all: $("#late_payment_claim_action_delete_debarement_all").prop('checked')
                          },
                          description: description
@@ -2131,14 +2135,18 @@
                 $("a[data-tabname='action_fee_tab'").click();
                 break;
             case "debarement":
-                $("#late_payment_claim_action_debarement_type").val(item.params.debarement_type);
+                if ( $("#late_payment_claim_action_debarement_type").length > 0 ) {
+                    $("#late_payment_claim_action_debarement_type").val(item.params.debarement_type);
+                }
                 $("#late_payment_claim_action_debarement_comment").val(item.params.debarement_comment);
                 $("#late_payment_claim_action_debarement_expiration").val(item.params.debarement_expiration);
                 $("a[data-tabname='action_debarement_tab'").click();
                 break;
             case "delete_debarement":
                 $("#late_payment_claim_action_delete_debarement_type").prop('checked',item.params.delete_debarement_type);
-                $("#late_payment_claim_action_delete_debarement_types").val(item.params.delete_debarement_types);
+                if ( $("#late_payment_claim_action_delete_debarement_types").length > 0 ) {
+                    $("#late_payment_claim_action_delete_debarement_types").val(item.params.delete_debarement_types);
+                }
                 $("#late_payment_claim_action_delete_debarement_all").prop('checked',item.params.delete_debarement_all);
                 $("a[data-tabname='action_debarement_delete_tab'").click();
                 break;
@@ -2232,12 +2240,16 @@
         // $("#late_payment_claim_action_fee_description").val('');
         $("#late_payment_claim_action_fee_note").val('[% defaultStrings.fee_note | html %]');
         
-        $("#late_payment_claim_action_debarement_type")[0].selectedIndex = 0;
+        if ( $("#late_payment_claim_action_debarement_type").length > 0 ) {
+            $("#late_payment_claim_action_debarement_type")[0].selectedIndex = 0;
+        }
         $("#late_payment_claim_action_debarement_comment").val('');
         $("#late_payment_claim_action_debarement_expiration").val('');
         
         $('#late_payment_claim_action_delete_debarement_type').prop('checked',false);
-        $('#late_payment_claim_action_delete_debarement_types')[0].selectedIndex = 0;
+        if ( $("#late_payment_claim_action_delete_debarement_types").length > 0 ) {
+            $('#late_payment_claim_action_delete_debarement_types')[0].selectedIndex = 0;
+        }
         $('#late_payment_claim_action_delete_debarement_all').prop('checked',true);
         
         $('#late_payment_claim_action_set_field_categorycode')[0].selectedIndex = 0;
