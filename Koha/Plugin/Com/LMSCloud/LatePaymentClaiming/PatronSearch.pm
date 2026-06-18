@@ -176,18 +176,22 @@ sub buildSearchParams {
                 }
                 push @{$query->{'-and'}}, \[ $q, @params ];
             }
-            if ( $selection->{search_field} eq 'issue_count' && ( $selection->{search_from} || $selection->{search_to} ) ) {
+            if ( $selection->{search_field} eq 'issue_count' && ( defined($selection->{search_from}) || defined($selection->{search_to}) ) ) {
                 my $q = '';
                 my @params;
-                if ( $selection->{search_from} && $selection->{search_to} ) {
+                if ( defined($selection->{search_from}) && defined($selection->{search_to}) && $selection->{search_from} == $selection->{search_to} ) {
+                    $q = '(SELECT COUNT(*) FROM issues iss WHERE iss.borrowernumber = me.borrowernumber) = ?';
+                    @params = ($selection->{search_from});
+                }
+                elsif ( defined($selection->{search_from}) && defined($selection->{search_to}) ) {
                     $q = '(SELECT COUNT(*) FROM issues iss WHERE iss.borrowernumber = me.borrowernumber) BETWEEN ? AND ?';
                     @params = ($selection->{search_from}, $selection->{search_to});
                 }
-                elsif ( $selection->{search_from} ) {
+                elsif ( defined($selection->{search_from}) ) {
                     $q = '(SELECT COUNT(*) FROM issues iss WHERE iss.borrowernumber = me.borrowernumber) >= ?';
                     @params = ($selection->{search_from});
                 }
-                elsif ( $selection->{search_to} ) {
+                elsif ( defined($selection->{search_to}) ) {
                     $q = '(SELECT COUNT(*) FROM issues iss WHERE iss.borrowernumber = me.borrowernumber) <= ?';
                     @params = ($selection->{search_to});
                 }
@@ -196,10 +200,10 @@ sub buildSearchParams {
                 }
                 push @{$query->{'-and'}}, \[ $q, @params ];
             }
-            if ( $selection->{search_field} eq 'charges_amount' && ( $selection->{search_from} || $selection->{search_to} ) ) {
+            if ( $selection->{search_field} eq 'charges_amount' && ( defined($selection->{search_from}) || defined($selection->{search_to}) ) ) {
                 my $q = '';
                 my @params;
-                if ( $selection->{search_from} && $selection->{search_from} =~ /^[0-9]+(\.+[0-9]+)?$/ && $selection->{search_to} && $selection->{search_to} =~ /^[0-9]+(\.+[0-9]+)?$/ ) {
+                if ( defined($selection->{search_from}) && $selection->{search_from} =~ /^[0-9]+(\.+[0-9]+)?$/ && defined($selection->{search_to}) && $selection->{search_to} =~ /^[0-9]+(\.+[0-9]+)?$/ ) {
                     $q = '( EXISTS (SELECT 1 FROM accountlines a WHERE a.borrowernumber = me.borrowernumber GROUP BY a.borrowernumber HAVING ';
                     if ( ($selection->{search_from} + 0.0) == 0.0 && ($selection->{search_to} + 0.0) == 0.0 ) {
                         $q .= "COALESCE(SUM(a.amountoutstanding),0) = 0.0) OR NOT EXISTS (SELECT 1 FROM accountlines aa WHERE aa.borrowernumber = me.borrowernumber) )";
@@ -210,13 +214,13 @@ sub buildSearchParams {
                         @params = ($selection->{search_from} + 0.0, $selection->{search_to} + 0.0);
                     }
                 }
-                elsif ( $selection->{search_from} && $selection->{search_from} =~ /^[0-9]+(\.+[0-9]+)?$/ ) {
+                elsif ( defined($selection->{search_from}) && $selection->{search_from} =~ /^[0-9]+(\.+[0-9]+)?$/ ) {
                     $q = '( EXISTS (SELECT 1 FROM accountlines a WHERE a.borrowernumber = me.borrowernumber GROUP BY a.borrowernumber HAVING SUM(a.amountoutstanding) >= ?)';
                     $q .= "OR NOT EXISTS (SELECT 1 FROM accountlines aa WHERE aa.borrowernumber = me.borrowernumber) " if ( ($selection->{search_from} + 0.0) == 0.0 );
                     $q .= " )";
                     @params = ($selection->{search_from} + 0.0);
                 }
-                elsif ( $selection->{search_to} && $selection->{search_to} =~ /^[0-9]+(\.+[0-9]+)?$/ ) {
+                elsif ( defined($selection->{search_to}) && $selection->{search_to} =~ /^[0-9]+(\.+[0-9]+)?$/ ) {
                     $q = '( EXISTS (SELECT 1 FROM accountlines a WHERE a.borrowernumber = me.borrowernumber GROUP BY a.borrowernumber HAVING SUM(a.amountoutstanding) <= ?)';
                     $q .= "OR NOT EXISTS (SELECT 1 FROM accountlines aa WHERE aa.borrowernumber = me.borrowernumber) " if ( ($selection->{search_to} + 0.0) == 0.0 );
                     $q .= " )";
