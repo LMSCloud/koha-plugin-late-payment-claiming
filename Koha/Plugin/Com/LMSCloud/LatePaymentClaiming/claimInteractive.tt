@@ -70,7 +70,7 @@
                         <br/>
                         Bei mehr als [% countClaimsLimit %] anstehenden Gebührenmahnungen müssen die Gebührenmahnungen im Tageslauf durchgeführt werden.
                     </p>
-                    [% IF patronsToClaim.size > 0 && patronsToClaim.size <= patronsToClaim %]
+                    [% IF patronsToClaim.size > 0 && patronsToClaim.size <= countClaimsLimit %]
                     <form method="get" id="start_claiming_action">
                         <input type="hidden" name="class" value="[% CLASS %]"/>
                         <input type="hidden" name="method" value="[% METHOD %]"/>
