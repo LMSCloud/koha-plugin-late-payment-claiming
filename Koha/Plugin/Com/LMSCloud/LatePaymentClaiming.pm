@@ -40,14 +40,14 @@ use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfigu
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming;
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution;
 
-our $VERSION = "1.0.3";
+our $VERSION = "1.0.5";
 our $MINIMUM_VERSION = "22.11";
 
 our $metadata = {
     name            => 'Gebührenmahnung',
     author          => 'LMSCloud GmbH',
     date_authored   => '2026-02-15',
-    date_updated    => "2026-06-18",
+    date_updated    => "2026-06-23",
     minimum_version => $MINIMUM_VERSION,
     maximum_version => undef,
     version         => $VERSION,
@@ -194,7 +194,7 @@ sub cronjob_nightly {
     my ( $self ) = @_;
     
     my $batch_active = $self->retrieve_data('batch_active') || 0;
-    return if ( $batch_active );
+    return if ( !$batch_active );
     
     my $execution_month_days = $self->retrieve_data('execution_month_days') || '*';
     my $execution_monthes = $self->retrieve_data('execution_monthes') || '*';
@@ -567,9 +567,9 @@ sub upgrade {
 sub uninstall() {
     my ( $self, $args ) = @_;
 
-    C4::Context->dbh->do("DROP TABLE IF EXISTS `lmsc_late_payment_claim`");
     C4::Context->dbh->do("DROP TABLE IF EXISTS `lmsc_late_payment_claim_history`");
     C4::Context->dbh->do("DROP TABLE IF EXISTS `lmsc_late_payment_claim_rules`");
+    C4::Context->dbh->do("DROP TABLE IF EXISTS `lmsc_late_payment_claim`");
     
     return 1;
 }
