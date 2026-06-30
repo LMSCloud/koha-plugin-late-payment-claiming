@@ -160,6 +160,9 @@ sub sendLetterAction {
         my $admin_email_address = $library->branchemail;
         my $notice_email        = '';
         $notice_email = $patron->notice_email_address if ( $letter_transport_type eq 'email' );
+        if ( $letter_transport_type eq 'email' && !$notice_email ) {
+            $letter_transport_type = 'print';
+        }
 
         try {
             my $prepared_letter = C4::Letters::GetPreparedLetter (
