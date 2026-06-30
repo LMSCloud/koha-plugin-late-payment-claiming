@@ -61,6 +61,14 @@ jobs:
         export KTD_HOME=$(pwd)
         ktd --name latepaymentclaiming --wait-ready 120
 
+    - name: Install plugin dependencies
+      run: |
+        export KTD_HOME=$(pwd)/../koha-testing-docker
+        ktd --name latepaymentclaiming --shell --run "
+          cd /kohadevbox/plugins/${{ env.GITHUB_REPO }} &&
+          sudo cpanm --installdeps --notest .
+        "
+
     - name: Run plugin tests
       run: |
         export KTD_HOME=$(pwd)/../koha-testing-docker
