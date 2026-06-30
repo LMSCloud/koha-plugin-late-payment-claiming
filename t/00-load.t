@@ -25,13 +25,6 @@ use File::Find;
 
 =cut
 
-my $lib = '/var/lib/koha/kohadev/plugins'; # Could be changed to $Bin/..
-
-unshift( @INC, $lib );
-unshift( @INC, '/kohadevbox/koha/' );
-unshift( @INC, '/kohadevbox/koha/misc/translator/' );
-unshift( @INC, '/kohadevbox/koha/t/lib/' );
-
 find(
     {
         bydepth  => 1,
@@ -44,7 +37,7 @@ find(
             use_ok($m) || BAIL_OUT("***** PROBLEMS LOADING FILE '$m'");
         },
     },
-    $lib
+    '.'
 );
 
 done_testing();
