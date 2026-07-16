@@ -75,7 +75,7 @@
                                 
                                 <label for="batch_active">
                                     [% IF batch_active %]
-                                        <input type="radio" id="batch_active" name="batch_active" value="1" checked="checked" /> Ja
+                                        <input type="radio" id="batch_active" name="batch_active" value="1" checked="checked" />
                                     [% ELSE %]
                                         <input type="radio" id="batch_active" name="batch_active" value="1" />
                                     [% END %]
