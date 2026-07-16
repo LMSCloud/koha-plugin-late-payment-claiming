@@ -59,7 +59,7 @@ jobs:
       run: |
         cd ../koha-testing-docker
         export KTD_HOME=$(pwd)
-        ktd --name latepaymentclaiming --wait-ready 120
+        ktd --name latepaymentclaiming --wait-ready 300
 
     - name: Install plugin dependencies
       run: |
