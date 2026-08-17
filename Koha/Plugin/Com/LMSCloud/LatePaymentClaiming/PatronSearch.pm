@@ -109,7 +109,7 @@ sub buildSearchParams {
                     @params = (1,'paused', 'open');
                     if ( $selection->{search_value} && $selection->{search_value} =~ /^([0-9]+)$/ ) {
                         my $days = $1;
-                        $q = 'EXISTS (SELECT 1 FROM lmsc_late_payment_claim lpc JOIN lmsc_late_payment_claim_history lpch ON (lpc.id = lpch.claim_id) WHERE lpc.borrowernumber = me.borrowernumber AND lpc.level >= ? AND lpch.level >= ? AND state IN (?,?) AND action = ? AND timestamp <= now() - interval ? day)';
+                        $q = 'EXISTS (SELECT 1 FROM lmsc_late_payment_claim lpc JOIN lmsc_late_payment_claim_history lpch ON (lpc.id = lpch.claim_id) WHERE lpc.borrowernumber = me.borrowernumber AND lpc.level >= ? AND lpch.level >= ? AND state IN (?,?) AND action = ? AND DATE(timestamp) <= DATE(now() - interval ? day) )';
                         @params = (1, 1, 'paused', 'open', 'claimed', $days);
                     }
                 }
@@ -119,7 +119,7 @@ sub buildSearchParams {
                     @params = ($l, 'paused', 'open');
                     if ( $selection->{search_value} && $selection->{search_value} =~ /^([0-9]+)$/ ) {
                         my $days = $1;
-                        $q = 'EXISTS (SELECT 1 FROM lmsc_late_payment_claim lpc JOIN lmsc_late_payment_claim_history lpch ON (lpc.id = lpch.claim_id) WHERE lpc.borrowernumber = me.borrowernumber AND lpc.level = ? AND lpch.level = ? AND state IN (?,?) AND action = ? AND timestamp <= now() - interval ? day)';
+                        $q = 'EXISTS (SELECT 1 FROM lmsc_late_payment_claim lpc JOIN lmsc_late_payment_claim_history lpch ON (lpc.id = lpch.claim_id) WHERE lpc.borrowernumber = me.borrowernumber AND lpc.level = ? AND lpch.level = ? AND state IN (?,?) AND action = ? AND DATE(timestamp) <= DATE(now() - interval ? day) )';
                         @params = ($l, $l, 'paused', 'open', 'claimed', $days);
                     }
                 }
