@@ -923,6 +923,28 @@
                                             Nicht
                                         </label>
                                     </li>
+                                    [% IF ( search_attribute_codes ) %]
+                                    <li>
+                                        <label for="latepayment_search_attribute_code_filter">Erweitertes Benutzerattribut: </label>
+                                        <select name="latepayment_search_attribute_code_filter" id="latepayment_search_attribute_code_filter">
+                                            <option value="">Keine Auswahl</option>
+                                            [% FOREACH pac IN search_attribute_codes %]
+                                                <option value="[% pac.attribute_code | html %]" data-type="[% pac.type | html %]" data-category="[% pac.category_lib | html %]">[% pac.attribute_lib | html %][% IF pac.category_lib %] ([% pac.category_lib | html %])[% END %]</option>
+                                            [% END %]
+                                        </select>
+                                        <select name="latepayment_search_attribute_searchtype_filter" id="latepayment_search_attribute_searchtype_filter">
+                                            <option value="any">Vorhanden (beliebiger Wert)</option>
+                                            <option value="equals">Ist genau</option>
+                                            <option value="starts_with">Beginnt mit</option>
+                                            <option value="contains">Enthält</option>
+                                        </select>
+                                        <span class="latepayment_search_attribute_value"><input type="text" name="latepayment_search_attribute_value_filter" id="latepayment_search_attribute_value_filter" maxlength="255"></span>
+                                        <label for="latepayment_search_attribute_filter_negate" class="latepayment_search_option_negate">
+                                            <input type="checkbox" name="latepayment_search_attribute_filter_negate" id="latepayment_search_attribute_filter_negate" value="1">
+                                            Nicht
+                                        </label>
+                                    </li>
+                                    [% END %]
                                 </ol>
                             </fieldset>
                         </form>
@@ -979,7 +1001,43 @@
         patron_attributes_lib["[% pav.attribute_code | html %]"] = values;
         patron_attributes_values["[% pav.attribute_code | html %]"] = lib;
     [% END %]
-    
+
+    var search_attribute_lib = new Array();
+    var search_attribute_values = new Array();
+
+    [% FOREACH pav IN search_attribute_values %]
+        values = new Array();
+        lib = new Array();
+        [% FOREACH option IN pav.options %]
+            values.push("[% option.lib | html %]");
+            lib.push("[% option.authorised_value | html %]");
+        [% END %]
+        search_attribute_lib["[% pav.attribute_code | html %]"] = values;
+        search_attribute_values["[% pav.attribute_code | html %]"] = lib;
+    [% END %]
+
+    function updateSearchAttrValues (select_attr) {
+        var attr_code = $(select_attr).val();
+        var selected_option = $(select_attr).find("option:selected");
+
+        var type = $(selected_option).attr('data-type');
+
+        var span = $('span.latepayment_search_attribute_value');
+        var current_value = $('#latepayment_search_attribute_value_filter').val();
+
+        if ( attr_code && type == 'select' ) {
+            var options = '<option value = ""></option>';
+            for ( var i = 0 ; i < search_attribute_values[attr_code].length ; i++ ) {
+                options += '<option value="'+search_attribute_values[attr_code][i]+'">'+search_attribute_lib[attr_code][i]+'</option>';
+            }
+            span.html('<select name="latepayment_search_attribute_value_filter" id="latepayment_search_attribute_value_filter">' + options + '</select>');
+            $('#latepayment_search_attribute_value_filter').val(current_value);
+        } else {
+            span.html('<input type="text" name="latepayment_search_attribute_value_filter" id="latepayment_search_attribute_value_filter" maxlength="255"/>');
+            $('#latepayment_search_attribute_value_filter').val(current_value);
+        }
+    }
+
     function updateAttrValues (select_attr) {
         var attr_code = $(select_attr).val();
         var selected_option = $(select_attr).find("option:selected");
@@ -1040,6 +1098,11 @@
             updateAttrValues(this);
         } );
         $('select[name="late_payment_claim_action_set_field_attribute_code"]').change();
+
+        $('select[name="latepayment_search_attribute_code_filter"]').change(function() {
+            updateSearchAttrValues(this);
+        } );
+        $('select[name="latepayment_search_attribute_code_filter"]').change();
         
         $('select[name="late_payment_claim_action_fee_debit_type"]').change(function() {
             updateDebitDefault(this);
@@ -1866,9 +1929,39 @@
             if ( $("#latepayment_search_patronlistid_filter_negate").prop('checked') == true )
                 description = 'Nicht: ' + description;
 
-            searchfields.push({ search_field: "patron_list", 
-                                search_value: $("#latepayment_search_patronlistid_filter").val().trim(), 
+            searchfields.push({ search_field: "patron_list",
+                                search_value: $("#latepayment_search_patronlistid_filter").val().trim(),
                                 negate: $("#latepayment_search_patronlistid_filter_negate").prop('checked'),
+                                description: description });
+        }
+        if ( $("#latepayment_search_attribute_code_filter").length > 0 && $("#latepayment_search_attribute_code_filter").val().trim().length > 0 )
+        {
+            $("#latepayment_search_attribute_value_filter").val(stripHtml($("#latepayment_search_attribute_value_filter").val() || ''));
+
+            var attr_searchtype = $("#latepayment_search_attribute_searchtype_filter").val();
+            var attr_value = $("#latepayment_search_attribute_value_filter").val() || '';
+            var attr_valuetext = ( $('#latepayment_search_attribute_value_filter').get(0).tagName == "SELECT" ) ?
+                                  $("#latepayment_search_attribute_value_filter option:selected").text() :
+                                  attr_value;
+
+            var description = 'Erweitertes Benutzerattribut "' + $("#latepayment_search_attribute_code_filter option:selected").text() + '" ';
+            if ( attr_searchtype == 'any' || attr_value.length == 0 ) {
+                description += 'vorhanden';
+            } else if ( attr_searchtype == 'equals' ) {
+                description += 'ist genau "' + attr_valuetext + '"';
+            } else if ( attr_searchtype == 'starts_with' ) {
+                description += 'beginnt mit "' + attr_valuetext + '"';
+            } else if ( attr_searchtype == 'contains' ) {
+                description += 'enthält "' + attr_valuetext + '"';
+            }
+            if ( $("#latepayment_search_attribute_filter_negate").prop('checked') == true )
+                description = 'Nicht: ' + description;
+
+            searchfields.push({ search_field: "patron_attribute",
+                                search_attribute_code: $("#latepayment_search_attribute_code_filter").val().trim(),
+                                search_type: ( attr_value.length == 0 ) ? 'any' : attr_searchtype,
+                                search_value: attr_value,
+                                negate: $("#latepayment_search_attribute_filter_negate").prop('checked'),
                                 description: description });
         }
         return searchfields;
@@ -2113,6 +2206,13 @@
                     $("#latepayment_search_patronlistid_filter").val(item.search_value);
                     $("#latepayment_search_patronlistid_filter_negate").prop('checked',item.negate);
                     break;
+                case "patron_attribute":
+                    $("#latepayment_search_attribute_code_filter").val(item.search_attribute_code);
+                    $("#latepayment_search_attribute_code_filter").change();
+                    $("#latepayment_search_attribute_searchtype_filter").val(item.search_type);
+                    $("#latepayment_search_attribute_value_filter").val(item.search_value);
+                    $("#latepayment_search_attribute_filter_negate").prop('checked',item.negate);
+                    break;
             }
         });
     }
@@ -2217,6 +2317,15 @@
         
         $("#latepayment_search_patronlistid_filter")[0].selectedIndex = 0;
         $("#latepayment_search_patronlistid_filter_negate").prop('checked', false);
+
+        if ( $("#latepayment_search_attribute_code_filter").length > 0 ) {
+            $("#latepayment_search_attribute_value_filter").val('');
+            $("#latepayment_search_attribute_code_filter")[0].selectedIndex = 0;
+            $("#latepayment_search_attribute_code_filter").change();
+            $("#latepayment_search_attribute_value_filter").val('');
+            $("#latepayment_search_attribute_searchtype_filter")[0].selectedIndex = 0;
+            $("#latepayment_search_attribute_filter_negate").prop('checked', false);
+        }
     }
     
     function resetActionParams() {

@@ -40,14 +40,14 @@ use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfigu
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming;
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution;
 
-our $VERSION = "1.0.12";
+our $VERSION = "1.0.13";
 our $MINIMUM_VERSION = "22.11";
 
 our $metadata = {
     name            => 'Gebührenmahnung',
     author          => 'LMSCloud GmbH',
     date_authored   => '2026-02-15',
-    date_updated    => "2026-08-17",
+    date_updated    => "2026-09-01",
     minimum_version => $MINIMUM_VERSION,
     maximum_version => undef,
     version         => $VERSION,
@@ -103,25 +103,43 @@ sub configure {
     # get the patron attributes list
     my @patron_attributes_values;
     my @patron_attributes_codes;
+    my @search_attribute_values;
+    my @search_attribute_codes;
     my $library_id = C4::Context->userenv ? C4::Context->userenv->{'branch'} : undef;
     my $patron_attribute_types = Koha::Patron::Attribute::Types->search_with_library_limits({}, {}, $library_id);
     my @patron_categories = Koha::Patron::Categories->search_with_library_limits({}, {order_by => ['description']})->as_list;
     while ( my $attr_type = $patron_attribute_types->next ) {
-        next if $attr_type->repeatable;
-        next if $attr_type->unique_id; # Don't display patron attributes that must be unqiue
         my $options = $attr_type->authorised_value_category
             ? GetAuthorisedValues( $attr_type->authorised_value_category )
             : undef;
-        push @patron_attributes_values,
-            {
-                attribute_code => $attr_type->code,
-                options        => $options,
-            };
 
         my $category_code = $attr_type->category_code;
         my ( $category_lib ) = map {
             ( defined $category_code and $attr_type->category_code eq $category_code ) ? $attr_type->description : ()
         } @patron_categories;
+
+        # the search filter may query any extended attribute, including repeatable and unique ones
+        push @search_attribute_values,
+            {
+                attribute_code => $attr_type->code,
+                options        => $options,
+            };
+        push @search_attribute_codes,
+            {
+                attribute_code => $attr_type->code,
+                attribute_lib  => $attr_type->description,
+                category_lib   => $category_lib,
+                type           => $attr_type->authorised_value_category ? 'select' : 'text',
+            };
+
+        next if $attr_type->repeatable;
+        next if $attr_type->unique_id; # Don't display patron attributes that must be unqiue
+
+        push @patron_attributes_values,
+            {
+                attribute_code => $attr_type->code,
+                options        => $options,
+            };
         push @patron_attributes_codes,
             {
                 attribute_code => $attr_type->code,
@@ -156,6 +174,8 @@ sub configure {
         restriction_types                 => \@restriction_types,
         patron_attributes_codes           => \@patron_attributes_codes,
         patron_attributes_values          => \@patron_attributes_values,
+        search_attribute_codes            => \@search_attribute_codes,
+        search_attribute_values           => \@search_attribute_values,
         patron_lists                      => [ GetPatronLists() ],
         library_id                        => scalar $cgi->param('library_id'),
         category_id                       => scalar $cgi->param('category_id'),

@@ -345,6 +345,31 @@ sub buildSearchParams {
                 }
                 push @{$query->{'-and'}}, \[ $q, @params ];
             }
+            if ( $selection->{search_field} eq 'patron_attribute' && $selection->{search_attribute_code} ) {
+                my $q = '';
+                my @params;
+                if ( $selection->{search_type} && $selection->{search_type} eq 'any' ) {
+                    $q = 'EXISTS (SELECT 1 FROM borrower_attributes ba WHERE ba.borrowernumber = me.borrowernumber AND ba.code = ?)';
+                    @params = ($selection->{search_attribute_code});
+                }
+                elsif ( $selection->{search_type} && defined($selection->{search_value}) && $selection->{search_value} ne '' ) {
+                    my $value = $selection->{search_value};
+                    if ( $selection->{search_type} eq 'starts_with' ) {
+                        $value .= '%';
+                    }
+                    elsif ( $selection->{search_type} eq 'contains' ) {
+                        $value = '%' . $value . '%';
+                    }
+                    $q = 'EXISTS (SELECT 1 FROM borrower_attributes ba WHERE ba.borrowernumber = me.borrowernumber AND ba.code = ? AND ba.attribute LIKE ?)';
+                    @params = ($selection->{search_attribute_code}, $value);
+                }
+                if ( $q ) {
+                    if ( $selection->{negate} && JSON->boolean($selection->{negate}) eq JSON::true )  {
+                        $q = 'NOT ' . $q;
+                    }
+                    push @{$query->{'-and'}}, \[ $q, @params ];
+                }
+            }
         }
     }
     # print Dumper($query);

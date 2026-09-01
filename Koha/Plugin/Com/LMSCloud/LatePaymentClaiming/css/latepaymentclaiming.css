@@ -115,6 +115,18 @@ fieldset.rows table {
     width: 35em;
 }
 
+#add_latepayment_patron_search_form #latepayment_search_attribute_code_filter {
+    width: 16em;
+    margin-right: 0.5em;
+}
+#add_latepayment_patron_search_form #latepayment_search_attribute_searchtype_filter {
+    width: 11em;
+    margin-right: 0.5em;
+}
+#add_latepayment_patron_search_form #latepayment_search_attribute_value_filter {
+    width: 7em;
+}
+
 .add_latepayment_frequency_unit {
     width: 8em;
     display: inline-block;
