@@ -25,6 +25,7 @@ use Data::Dumper;
 use Try::Tiny qw( catch try );
 
 use Mojo::Base 'Mojolicious::Controller';
+use C4::Context;
 use Koha::Patrons;
 use Koha::DateUtils qw( dt_from_string );
 
@@ -62,11 +63,42 @@ sub searchPatrons {
                                             $filter
                                         );
 
-        my $patron_rs = $c->objects->search_rs( $patron_result_set );
-        
-        # Add pagination headers
-        $c->add_pagination_headers();
-    
+        # Apply sorting/pagination directly on the resultset instead of via
+        # $c->objects->search_rs(): that helper also reads $c->req->json (the
+        # *whole* POST body) and treats it as an implicit DBIx::Class "q"
+        # filter expression - a Koha core convention for endpoints whose body
+        # *is* a query object. This endpoint's body has its own shape
+        # (library_id/patron_selection/search_options), so that auto-merge
+        # misinterprets fields such as search_options[].value's own keys
+        # (e.g. "fixed", from DataTables' search object) as query operators,
+        # raising "invalid_query" - or worse, builds malformed SQL out of
+        # unrelated fields like patron_selection[].description.
+        my $params = $c->validation->output;
+
+        my @order_by;
+        if ( $params->{_order_by} ) {
+            my @fields = ref( $params->{_order_by} ) eq 'ARRAY' ? @{ $params->{_order_by} } : ( $params->{_order_by} );
+            foreach my $field (@fields) {
+                if ( $field =~ /^-(.+)$/ ) {
+                    push @order_by, { -desc => $1 };
+                } elsif ( $field =~ /^\+?(.+)$/ ) {
+                    push @order_by, { -asc => $1 };
+                }
+            }
+        }
+
+        my $per_page = $params->{_per_page} || C4::Context->preference('RESTdefaultPageSize') || 20;
+        my $page     = $params->{_page} || 1;
+
+        my $search_attrs = {};
+        $search_attrs->{order_by} = \@order_by if @order_by;
+        unless ( $per_page == -1 ) {
+            $search_attrs->{rows} = $per_page;
+            $search_attrs->{page} = $page;
+        }
+
+        my $patron_rs = $patron_result_set->search( undef, $search_attrs );
+
         my $patrons = $c->objects->to_api($patron_rs);
         
         return $c->render(

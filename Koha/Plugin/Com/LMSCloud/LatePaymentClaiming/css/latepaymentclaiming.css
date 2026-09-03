@@ -3,6 +3,20 @@
     margin: 0px;
 }
 
+/*
+ * Koha 22.11's ".btn" rule sets an explicit "line-height: 1.42857143" (via
+ * its "default-button" mixin), so a button renders at the same height
+ * regardless of its surrounding context. Koha 25.11 gutted that mixin down
+ * to "white-space: nowrap" only, leaving line-height to be inherited - so
+ * the same button renders at a different height inside a bold <th> (e.g.
+ * the "Hinzufügen" header button) than inside a plain <td> (e.g. the
+ * "Bearbeiten"/"Löschen" row buttons), even though both use the exact same
+ * classes. Pin it explicitly so both match on either Koha version.
+ */
+#late_payment_claim_plugin_configuration .btn {
+    line-height: 1.42857143;
+}
+
 .latepayment_claim {
     background-color: #eff1eb;
     margin-top: 1em;
@@ -39,7 +53,16 @@
 .latepayment_userselection_do_head,
 .latepayment_actions_do_head {
     text-align: left;
-    padding: 0.2em 0.9em;
+    /*
+     * A different, unrelated Koha stylesheet ships a buggy, unscoped
+     * selector - "#receipt td,th { padding-left: 3px !important; ... }"
+     * (missing "#receipt" before "th") - which applies its 3px padding to
+     * every <th> on any page, not just inside "#receipt". Restore the
+     * normal table padding here with !important + a class selector, which
+     * outranks that rule's bare "th" element selector.
+     */
+    padding-left: 0.9em !important;
+    padding-right: 0.9em !important;
 }
 
 .latepayment_claimlevel_name {
@@ -165,6 +188,15 @@ aside fieldset.brief label.latepayment_search_option_negate {
 #latePaymentClaimsTool table .filter_column > input[type="text"],
 #latePaymentCurrentClaims table .filter_column > input[type="text"] {
     border: 1px solid grey;
+    /*
+     * Koha core's ".filter_column > input[type=\"text\"]" rule (_tables.scss)
+     * sets "color: #999", meant to mimic a placeholder for the old
+     * columnFilter plugin, which put a real value (the label) into these
+     * inputs. Now that these use the native "placeholder" attribute instead,
+     * that grey applies to whatever the user actually typed too - restore
+     * normal text color; the browser dims the placeholder on its own.
+     */
+    color: inherit;
 }
 
 .latepayment_userselection_list ul li, .latepayment_action_list ul li  {
@@ -191,7 +223,7 @@ aside fieldset.brief label.latepayment_search_option_negate {
 
 .late_payment_claim_action_set_field_with_li_append {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
 }
 
@@ -247,18 +279,6 @@ table#latePaymentClaimHistory tr:nth-child(2) th:nth-child(10) {
     max-width: 6em;
 }
 
-#action_selection .modal-dialog {
-    width: 700px;
-}
-
-#claim_action_history .modal-dialog {
-    width: 1024px;
-}
-
-#selection_patron_list .modal-dialog {
-    width: 1024px;
-}
-
 #patron_search_form .flatpickr {
     width: 10em;
 }
@@ -269,4 +289,165 @@ table#latePaymentClaimHistory tr:nth-child(2) th:nth-child(10) {
 
 .noJournalListAvailable {
     display: none;
+}
+}
+
+/*
+ * Modal width/layout fixes shared between Koha 22.11 (Bootstrap 3) and
+ * Koha 25.11 (Bootstrap 5). These rules were previously nested inside the
+ * "max-width: 1400px" media query above, so they were silently dropped on
+ * wider screens. They are declared unconditionally here instead.
+ */
+/*
+ * Bootstrap 5's ".modal-dialog" ships its own "max-width: 500px" (from
+ * $modal-md), which silently clamps any larger "width" declared here back
+ * down to 500px - Bootstrap 3 has no such competing max-width, so this only
+ * showed up on Koha 25.11. Set "max-width" alongside "width" everywhere.
+ */
+#action_selection .modal-dialog {
+    width: 800px;
+    max-width: 800px;
+}
+
+#claim_action_history .modal-dialog {
+    width: 1024px;
+    max-width: 1024px;
+}
+
+/*
+ * "table-layout: fixed" with narrow percentage-width columns (e.g. the
+ * "Vorgang"/"Mahnstufe" columns at 5% each) means a header or cell value
+ * that doesn't contain a natural break point (no space, no soft hyphen)
+ * simply overflows sideways into the next column instead of wrapping.
+ * Force wrapping so content always stays inside its own column, on any
+ * table using "table-layout: fixed" (only #claimActionHistory and
+ * #patronSearchResult, currently).
+ */
+#claimActionHistory th,
+#claimActionHistory td,
+#patronSearchResult th,
+#patronSearchResult td {
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+#selection_patron_list .modal-dialog {
+    width: 1024px;
+    max-width: 1024px;
+}
+
+#patron_selection .modal-dialog,
+#add_late_payment_claim .modal-dialog,
+#change_late_payment_claim .modal-dialog,
+#next_execution_days_modal .modal-dialog,
+#show_selections .modal-dialog,
+#show_banactions .modal-dialog {
+    width: 600px;
+    max-width: 600px;
+}
+
+/*
+ * Bootstrap 3's ".modal-header" relies on ".closebtn { float: right; }" to
+ * position the close button, which only works because the button markup
+ * comes before the title in the DOM. Bootstrap 5's ".modal-header" is a flex
+ * container instead ("justify-content: space-between"), which lays elements
+ * out in DOM order and no longer ships any ".closebtn" styling at all - so
+ * on Koha 25.11 the close button rendered unstyled on the left of the title.
+ * Forcing flex layout here (with explicit "order") makes the header render
+ * identically on both Koha versions regardless of core CSS differences.
+ */
+#show_selections .modal-header,
+#show_banactions .modal-header,
+#claim_action_history .modal-header,
+#change_late_payment_claim .modal-header,
+#add_late_payment_claim .modal-header,
+#action_selection .modal-header,
+#next_execution_days_modal .modal-header,
+#selection_patron_list .modal-header,
+#patron_selection .modal-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    text-align: left !important;
+}
+
+/*
+ * Bootstrap 3's compiled CSS applies its clearfix hack directly to
+ * ".modal-header" ("content: ' '; display: table" on :before/:after), which
+ * was only ever meant to contain the old ".closebtn { float: right; }".
+ * Once ".modal-header" above becomes a flex container, those two empty
+ * pseudo-elements turn into two EXTRA flex items - so "justify-content:
+ * space-between" distributes 4 items instead of 2, and the title ends up
+ * somewhere in the middle instead of flush left. Suppress them here; they
+ * have no purpose once the header no longer relies on floats.
+ */
+#show_selections .modal-header::before,
+#show_selections .modal-header::after,
+#show_banactions .modal-header::before,
+#show_banactions .modal-header::after,
+#claim_action_history .modal-header::before,
+#claim_action_history .modal-header::after,
+#change_late_payment_claim .modal-header::before,
+#change_late_payment_claim .modal-header::after,
+#add_late_payment_claim .modal-header::before,
+#add_late_payment_claim .modal-header::after,
+#action_selection .modal-header::before,
+#action_selection .modal-header::after,
+#next_execution_days_modal .modal-header::before,
+#next_execution_days_modal .modal-header::after,
+#selection_patron_list .modal-header::before,
+#selection_patron_list .modal-header::after,
+#patron_selection .modal-header::before,
+#patron_selection .modal-header::after {
+    display: none !important;
+    content: none !important;
+}
+
+#show_selections .modal-header .modal-title,
+#show_banactions .modal-header .modal-title,
+#claim_action_history .modal-header .modal-title,
+#change_late_payment_claim .modal-header .modal-title,
+#add_late_payment_claim .modal-header .modal-title,
+#action_selection .modal-header .modal-title,
+#next_execution_days_modal .modal-header .modal-title,
+#selection_patron_list .modal-header .modal-title,
+#patron_selection .modal-header .modal-title {
+    order: 1 !important;
+    flex-grow: 0 !important;
+    text-align: left !important;
+    width: auto !important;
+}
+
+#show_selections .modal-header .closebtn,
+#show_banactions .modal-header .closebtn,
+#claim_action_history .modal-header .closebtn,
+#change_late_payment_claim .modal-header .closebtn,
+#add_late_payment_claim .modal-header .closebtn,
+#action_selection .modal-header .closebtn,
+#next_execution_days_modal .modal-header .closebtn,
+#selection_patron_list .modal-header .closebtn,
+#patron_selection .modal-header .closebtn {
+    order: 2;
+    background: transparent;
+    border: 0;
+    color: #000;
+    cursor: pointer;
+    font-size: 21px;
+    font-weight: bold;
+    line-height: 1;
+    opacity: 0.5;
+    padding: 0;
+    text-decoration: none;
+}
+
+#show_selections .modal-header .closebtn:hover,
+#show_banactions .modal-header .closebtn:hover,
+#claim_action_history .modal-header .closebtn:hover,
+#change_late_payment_claim .modal-header .closebtn:hover,
+#add_late_payment_claim .modal-header .closebtn:hover,
+#action_selection .modal-header .closebtn:hover,
+#next_execution_days_modal .modal-header .closebtn:hover,
+#selection_patron_list .modal-header .closebtn:hover,
+#patron_selection .modal-header .closebtn:hover {
+    opacity: 0.75;
 }

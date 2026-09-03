@@ -71,13 +71,13 @@
                             <th>Ausweis&shy;nummer</th>
                             <th>Benut&shy;zer</th>
                             <th class="latepaypemnt_claim_list_rightcol" style="white-space: nowrap;">Gebüh&shy;ren</th>
-                            <th>Auswahl Bibliothek</th>
-                            <th>Auswahl Kategorie</th>
+                            <th>Bibliothek</th>
+                            <th>Kategorie</th>
                             <th class="latepaypemnt_claim_list_rightcol" style="white-space: nowrap;">Datum</th>
                             <th>Mahn&shy;stufe</th>
                             <th>Status</th>
                             <th>Kommentar</th>
-                            <th>&nbsp;</th>
+                            <th>Aktion</th>
                         </tr>
                         <tr>
                             <th>Mahnfall</th>
@@ -90,7 +90,7 @@
                             <th>Mahnstufe</th>
                             <th>Status</th>
                             <th>Kommentar</th>
-                            <th>Aktion</th>
+                            <th></th>
                         </tr>
                     </thead>
 
@@ -107,7 +107,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <button type="button" class="closebtn" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 <h4 class="modal-title" id="action_selectionLabel">Historie des Mahnfalls</h4>
             </div>
             <div class="modal-body">
@@ -115,7 +115,7 @@
                     <thead>
                         <tr>
                             <th>Zeitpunkt</th>
-                            <th>Vorgang</th>
+                            <th>Vor&shy;gang</th>
                             <th>Mahn&shy;stufe</th>
                             <th>Notiz</th>
                             <th>Gebüh&shy;ren&shy;stand</th>
@@ -130,7 +130,7 @@
             </div> <!-- /.modal-body -->
             <div class="modal-footer">
                 <form>
-                    <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-default deny" data-dismiss="modal" data-bs-dismiss="modal">Abbrechen</button>
                 </form>
             </div> <!-- /.modal-footer -->
         </div> <!-- /.modal-content -->
@@ -142,7 +142,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <button type="button" class="closebtn" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 <h4 class="modal-title" id="change_late_payment_claim_title">Gebührenmahnung pausieren</h4>
             </div>
             <form id="change_late_payment_claim_form" data-level="" data-index="">
@@ -161,7 +161,7 @@
             <div class="modal-footer">
                 <form id="action_change_late_payment_claim">
                     <button type="submit" id="change_late_payment_claim_action_text" class="btn btn-default approve">Gebührenmahnung pausieren</button>
-                    <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-default deny" data-dismiss="modal" data-bs-dismiss="modal">Abbrechen</button>
                 </form>
             </div> <!-- /.modal-footer -->
         </div> <!-- /.modal-content -->
@@ -173,7 +173,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <button type="button" class="closebtn" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 <h4 class="modal-title" id="add_late_payment_claim_title">Mahnfall ergänzen</h4>
             </div>
             <div class="modal-body">
@@ -210,7 +210,7 @@
             <div class="modal-footer">
                 <form id="action_add_late_payment_claim">
                     <button type="submit" id="add_late_payment_claim_action_text" class="btn btn-default approve">Hinzufügen</button>
-                    <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-default deny" data-dismiss="modal" data-bs-dismiss="modal">Abbrechen</button>
                 </form>
             </div> <!-- /.modal-footer -->
         </div> <!-- /.modal-content -->
@@ -221,7 +221,7 @@
     [% INCLUDE 'calendar.inc' %]
     [% INCLUDE 'datatables.inc' %]
     [% INCLUDE 'select2.inc' %]
-    [% Asset.js("lib/jquery/plugins/jquery.dataTables.columnFilter.js") | $raw %]
+    <script src="/api/v1/contrib/latepaymentclaiming/static/js/latepaymentclaiming-datatables.js"></script>
     <script>
         [% IF action == 'list' %]
             var claimList;
@@ -305,14 +305,6 @@
                 });
             }
             
-            function fnCreateDateRangeInput(oTable) {
-                var th = $('#latePaymentClaimsList thead tr:nth-child(2) th:nth-child(7)');
-                th.html('<span id="addFromFlatPickr">Von</span> <input type="text" class="date_range_filter flatpickr" id="latePaymentClaimsList_range_from_4" rel="4" size="10"><br>' + 
-                        '<span id="toFromFlatPickr">bis</span> <input type="text" class="date_range_filter flatpickr" id="latePaymentClaimsList_range_to_4" rel="4" size="10">');
-                flatpickr("#latePaymentClaimsList_range_from_4", {  });
-                flatpickr("#latePaymentClaimsList_range_to_4", {  });
-            }
-            
             function addClaimManually() {
                 $("#add_late_payment_claim_error").hide();
                 $('#add_late_payment_claim_comment').val('');
@@ -334,6 +326,7 @@
                     'pagingType': 'full_numbers',
                     'processing': true,
                     'fixedHeader': true,
+                    'orderCellsTop': true,
                     'sDom': '<"top pager"ilp>t<"bottom pager"ip>r',
                     'columns': [
                         { 
@@ -355,7 +348,7 @@
                         },
                         {
                             'name': 'patron',
-                            'data': 'patron',
+                            'data': 'surname',
                             'width': "15%",
                              render: function ( data, type, row, meta ) {
                                  let patron_id = encodeURIComponent(row.patron_id);
@@ -434,10 +427,9 @@
                                 return escape_str( patron_id + ". Mahnung");
                             }
                         },
-                        { 
+                        {
                             'name': 'status',
                             'data': 'status',
-                            'sSearch': 'open',
                             'width': "6%",
                             'render': function( data, type, row, meta ) {
                                 let status = encodeURIComponent(data);
@@ -459,6 +451,7 @@
                         {
                             orderable: false,
                             'name': 'actions',
+                            'data': null,
                             'width': "10%" ,
                             'render': function( data, type, row, meta ) {
                                 let status = encodeURIComponent(row.status);
@@ -496,82 +489,52 @@
                             "sPrevious":   "Vorige"
                         },
                     },
-                    "ajax": '/api/v1/contrib/latepaymentclaiming/late_payment_claims',
-                    "sAjaxSource": '/api/v1/contrib/latepaymentclaiming/late_payment_claims',
-                    "fnServerData": function(sSource, params, fnCallback) {
-                        // console.log(params);
-                        let readParams = {};
-                        for (let i=0;i<params.length;i++) {
-                            readParams[params[i].name] = params[i].value;
-                        }
-                        
+                    'searchCols': [ null, null, null, null, null, null, null, null, { 'search': statusFilter }, null, null ],
+                    "ajax": function(data, callback, settings) {
                         var patron_id = "[% patron_id | html %]";
-                        let searchParams = { 
-                                               '_per_page': readParams['iDisplayLength'],
-                                               '_page': (readParams['iDisplayStart'] / readParams['iDisplayLength']) + 1,
-                                               'draw': readParams['sEcho'],
-                                           };
+                        var fieldMap = { library_id: 'library', category_id: 'category', surname: 'patron' };
+                        var params = lmscPaging(data);
                         if ( patron_id.length > 0 && patron_id && /^\d+$/.test(patron_id) ) {
-                            searchParams['patron_id'] = patron_id;
+                            params['patron_id'] = patron_id;
                         }
-                        for (let i=0;i<readParams['iColumns'];i++) {
-                            var field = readParams['mDataProp_' + i];
-                            if ( field == 'library_id' ) field = 'library';
-                            else if ( field == 'category_id' ) field = 'category';
-                            if ( field.length > 0 && field != "creationdate" ) {
-                                searchParams[field] = readParams['sSearch_' + i];
+                        data.columns.forEach(function(column) {
+                            if ( !column.search || !column.search.value ) return;
+                            var field = fieldMap[column.data] || column.data;
+                            if ( field == 'creationdate' ) {
+                                var range = lmscSplitRange(column.search.value);
+                                if ( range.from ) params['creationdate_from'] = range.from;
+                                if ( range.to ) params['creationdate_to'] = range.to;
+                            } else if ( field ) {
+                                params[field] = column.search.value;
                             }
-                        }
-                        searchParams['creationdate_from'] = $("#latePaymentClaimsList_range_from_4").val();
-                        searchParams['creationdate_to'] = $("#latePaymentClaimsList_range_to_4").val();
-                        let sortFields = [];
-                        for (let i=0;i<readParams['iSortingCols'];i++) {
-                            var field = readParams['mDataProp_' + readParams['iSortCol_' + i]];
-                            var direction = readParams['sSortDir_' + i];
-                            if ( field == 'library_id' ) field = 'library';
-                            else if ( field == 'category_id' ) field = 'category';
-                            if ( field.length > 0 ) {
-                                if ( direction == 'desc' ) sortFields.push("-"+field);
-                                else sortFields.push("+"+field);
-                            }
-                        }
-                        searchParams['_order_by'] = sortFields.join(",");
+                        });
+                        params['_order_by'] = lmscOrderBy(data, { fieldMap: fieldMap });
                         $.ajax({
                             'dataType': 'json',
                             'type': 'GET',
-                            'url': sSource,
-                            'data': searchParams,
+                            'url': '/api/v1/contrib/latepaymentclaiming/late_payment_claims',
+                            'data': params,
                             'success': function(json){
-                                fnCallback(json);
+                                callback(json);
                             }
                         });
                     }
-                })).columnFilter({
-                    'sPlaceHolder': 'head:after',
-                    'sRangeFormat': 'Von {from}<br>bis {to}',
-                    'aoColumns': [
-                        { 'type': 'text' },
-                        { 'type': 'text' },
-                        { 'type': 'text' },
-                        { 'type': 'number-range' },
-                        { 'type': 'select', 'values': [% branches.json %] },
-                        { 'type': 'select', 'values': [% categorylist.json %]  },
-                        { 'type': 'date-range' },
-                        { 'type': 'select', 'values': [{"label":"1. Mahnung","value":"1"},{"label":"2. Mahnung","value":"2"},{"label":"3. Mahnung","value":"3"},{"label":"4. Mahnung","value":"4"},{"label":"5. Mahnung","value":"5"}] },
-                        { 'type': 'select', 'selected': statusFilter, 'values': [{"label":"laufend","value":"open"},{"label":"abgeschlossen","value":"closed"},{"label":"pausierend","value":"paused"}] },
-                        { 'type': 'text' },
-                        null
-                    ]
-                });
-                
-                // claimList.api().columns.adjust().draw();
+                }));
 
-                $('input#latePaymentClaimsList_range_from_4,input#latePaymentClaimsList_range_to_4').change(function (event) {
-                    event.target._flatpickr.close();
-                    $(".clear_date").first().focus();
-                    claimList.api().columns.adjust().draw();
-                });
-                
+                lmscBuildFilterRow(claimList.api(), [
+                    { type: 'text' },
+                    { type: 'text' },
+                    { type: 'text' },
+                    { type: 'number-range' },
+                    { type: 'select', values: [% branches.json %] },
+                    { type: 'select', values: [% categorylist.json %]  },
+                    { type: 'date-range' },
+                    { type: 'select', values: [{"label":"1. Mahnung","value":"1"},{"label":"2. Mahnung","value":"2"},{"label":"3. Mahnung","value":"3"},{"label":"4. Mahnung","value":"4"},{"label":"5. Mahnung","value":"5"}] },
+                    { type: 'select', values: [{"label":"laufend","value":"open"},{"label":"abgeschlossen","value":"closed"},{"label":"pausierend","value":"paused"}] },
+                    { type: 'text' },
+                    null
+                ]);
+
                 $("#action_add_late_payment_claim").on("submit",function(event) {
                     event.preventDefault();
 
@@ -753,7 +716,7 @@
                             },
                             { 
                                 name: 'manager',
-                                data: 'manager',
+                                data: null,
                                 sWidth: "10%",
                                 orderable: false,
                                 render: function( data, type, row, meta ) {
@@ -774,7 +737,7 @@
                                 }
                             }
                         ],
-                        "order": [[ 1, "asc" ]],
+                        "order": [[ 0, "desc" ]],
                         "language": {
                             "paginate": {
                                         "first":      "Erste",
@@ -800,29 +763,18 @@
                                 node.addClass("disabled");
                             }
                         }],
-                        "ajax": '/api/v1/contrib/latepaymentclaiming/late_payment_claim_history',
-                        "sAjaxSource": '/api/v1/contrib/latepaymentclaiming/late_payment_claim_history',
-                        
-                        "fnServerData": function(sSource, params, fnCallback) {
-                            // console.log(params);
-                            let readParams = {};
-                            for (let i=0;i<params.length;i++) {
-                                readParams[params[i].name] = params[i].value;
-                            }
-                            let searchParams = { 
-                                                   'claim_id': claim_id,
-                                                   '_per_page': readParams['iDisplayLength'],
-                                                   '_page': (readParams['iDisplayStart'] / readParams['iDisplayLength']) + 1,
-                                                   'draw': readParams['sEcho'],
-                                                   '_order_by': '-action_timestamp'
-                                               };
+                        "ajax": function(data, callback, settings) {
+                            var params = $.extend(lmscPaging(data), {
+                                'claim_id': claim_id,
+                                '_order_by': '-action_timestamp'
+                            });
                             $.ajax({
                                 'dataType': 'json',
                                 'type': 'GET',
-                                'url': sSource,
-                                'data': searchParams,
+                                'url': '/api/v1/contrib/latepaymentclaiming/late_payment_claim_history',
+                                'data': params,
                                 'success': function(json){
-                                    fnCallback(json);
+                                    callback(json);
                                 }
                             });
                         }
@@ -831,6 +783,21 @@
         [% END %]
     </script>
     
-    [% PROCESS patron_search_js table_id => 'memberresultst', categories => categories, libraries => libraries, extended_attribute_types => attribute_type_codes, columns => columns, filter => filter, actions => [selection_type], preview_on_name_click => 1, callback => callback %]
+    <script>
+        /*
+         * Koha 25.11's rewritten "patron_search_js" macro (patron-search.inc)
+         * assumes a real DataTable exists for its "table_id" and throws
+         * ("patrons_table is undefined") when it doesn't - this plugin has
+         * never rendered a #memberresultst table, so the call was always
+         * inert, just silent on 22.11's older macro. $patron_to_html /
+         * $format_address / $get_age are already loaded globally
+         * (js_includes.inc), so only the lookup maps this plugin's own code
+         * actually uses are built here.
+         */
+        var libraries_map = [% libraries.json %].reduce(function(map, e) { map[e.branchcode] = e; return map; }, {});
+        var categories_map = [% categories.json %].reduce(function(map, e) { map[e.categorycode.toLowerCase()] = e; return map; }, {});
+        var singleBranchMode = '[% singleBranchMode | html %]';
+        var logged_in_library_id = "[% Branches.GetLoggedInBranchcode | html %]";
+    </script>
 [% END %]
 [% INCLUDE 'intranet-bottom.inc' %]

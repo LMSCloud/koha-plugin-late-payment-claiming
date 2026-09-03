@@ -167,7 +167,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <button type="button" class="closebtn" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 <h4 class="modal-title" id="show_selections_details_title">Selektionen</h4>
             </div>
             <div class="modal-body">
@@ -178,7 +178,7 @@
             </div> <!-- /.modal-body -->
             <div class="modal-footer">
                 <form id="show_selections_actions">
-                    <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-default deny" data-dismiss="modal" data-bs-dismiss="modal">Abbrechen</button>
                 </form>
             </div> <!-- /.modal-footer -->
         </div> <!-- /.modal-content -->
@@ -190,7 +190,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <button type="button" class="closebtn" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 <h4 class="modal-title" id="show_banactions_details_title">Aktionen</h4>
             </div>
             <div class="modal-body">
@@ -201,7 +201,7 @@
             </div> <!-- /.modal-body -->
             <div class="modal-footer">
                 <form id="show_selections_actions">
-                    <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-default deny" data-dismiss="modal" data-bs-dismiss="modal">Abbrechen</button>
                 </form>
             </div> <!-- /.modal-footer -->
         </div> <!-- /.modal-content -->
@@ -212,7 +212,6 @@
     [% INCLUDE 'calendar.inc' %]
     [% INCLUDE 'datatables.inc' %]
     [% INCLUDE 'select2.inc' %]
-    [% Asset.js("lib/jquery/plugins/jquery.dataTables.columnFilter.js") | $raw %]
     <script>
         $(document).ready(function() {
             var claimList = $("#patronsToClaim").dataTable($.extend(true, {}, dataTablesDefaults, {

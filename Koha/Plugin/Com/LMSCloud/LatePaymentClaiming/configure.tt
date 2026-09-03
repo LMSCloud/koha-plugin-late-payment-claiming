@@ -164,7 +164,7 @@
                             </li>
                             <li>
                                 <label for="generate_next_execution_days">Nächste Ausführungstage:</label>
-                                <input class="btn btn-xs" onclick="javascript:getNextExecutionDays()" name="generate_next_execution_days" id="generate_next_execution_days" value="Anzeigen" />
+                                <input class="btn btn-default btn-xs" onclick="javascript:getNextExecutionDays()" name="generate_next_execution_days" id="generate_next_execution_days" value="Anzeigen" />
                             </li>
                             <li style="margin-top:1.5em">
                             </li>
@@ -196,7 +196,7 @@
                                                 Aktion
                                             </th>
                                             <th class="unban_actions_do_head">
-                                                <a class="btn btn-xs add_unban_action"><i class="fa fa-plus" aria-hidden="true"></i> Hinzufügen</a>
+                                                <a class="btn btn-default btn-xs add_unban_action"><i class="fa fa-plus" aria-hidden="true"></i> Hinzufügen</a>
                                             </th>
                                         </tr>
                                     </thead>
@@ -207,7 +207,7 @@
                             </li>
                             <li style="margin-top:1.5em">
                                 <label for="save_general">&nbsp;</label>
-                                <input class="btn btn-xs" type="submit" name="save_general" value="Allgemeine Einstellungen speichern" />
+                                <input class="btn btn-primary btn-xs" type="submit" name="save_general" value="Allgemeine Einstellungen speichern" />
                             </li>
                         </ol>
                     </fieldset>
@@ -337,8 +337,8 @@
                         </div>
                         
                         <div class="add_latepayment_claimlevel">
-                            <a class="btn btn-xs" onclick="addLatePaymentClaimLevelConfig()"><i class="fa fa-plus" aria-hidden="true"></i> Mahnstufe hinzufügen</a>
-                            <a class="btn btn-xs submit" onclick="saveLatePaymentClaimLevelConfig()"><i class="fa fa-floppy-o" aria-hidden="true"></i> Konfiguration speichern</a>
+                            <a class="btn btn-default btn-xs" onclick="addLatePaymentClaimLevelConfig()"><i class="fa fa-plus" aria-hidden="true"></i> Mahnstufe hinzufügen</a>
+                            <a class="btn btn-default btn-xs submit" onclick="saveLatePaymentClaimLevelConfig()"><i class="fa fa-floppy-o fa-floppy-disk" aria-hidden="true"></i> Konfiguration speichern</a>
                         </div>
 
                         <div class="alert alert-success show-late-payment-claim-config-save-success" style="display:none; margin-top:15px">
@@ -355,11 +355,11 @@
                             <div class="latepayment_claim">
                                 <div class="latepayment_claimlevel">
                                     <div class="row"> 
-                                        <div class="col-xs-3 latepayment_claimlevel_name">
+                                        <div class="col-xs-3 col-3 latepayment_claimlevel_name">
                                             Mahnstufe <span class="latepayment_claimlevel_number">1</span>
                                         </div>
-                                        <div class="col-xs-9">
-                                            <a class="btn btn-xs latepayment_claimlevel_delete"><i class="fa fa-times" aria-hidden="true"></i> Löschen</a>
+                                        <div class="col-xs-9 col-9">
+                                            <a class="btn btn-default btn-xs latepayment_claimlevel_delete"><i class="fa fa-times" aria-hidden="true"></i> Löschen</a>
                                         </div>
                                     </div>
                                 </div>
@@ -376,7 +376,7 @@
                                                 Benutzerauswahl
                                             </th>
                                             <th class="latepayment_userselection_do_head" style="width:35%">
-                                                <a class="btn btn-xs latepayment_claimlevel_add_selection"><i class="fa fa-plus" aria-hidden="true"></i> Hinzufügen</a>
+                                                <a class="btn btn-default btn-xs latepayment_claimlevel_add_selection"><i class="fa fa-plus" aria-hidden="true"></i> Hinzufügen</a>
                                             </th>
                                         </tr>
                                     </thead>
@@ -394,7 +394,7 @@
                                                 Aktion
                                             </th>
                                             <th class="latepayment_actions_do_head">
-                                                <a class="btn btn-xs latepayment_claimlevel_add_action"><i class="fa fa-plus" aria-hidden="true"></i> Hinzufügen</a>
+                                                <a class="btn btn-default btn-xs latepayment_claimlevel_add_action"><i class="fa fa-plus" aria-hidden="true"></i> Hinzufügen</a>
                                             </th>
                                         </tr>
                                     </thead>
@@ -430,7 +430,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <button type="button" class="closebtn" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 <h4 class="modal-title" id="action_selectionLabel">Bitte wählen Sie eine Aktion</h4>
             </div>
             <form id="add_latepayment_action_form" data-level="" data-index="">
@@ -630,7 +630,7 @@
                                         </li>
                                         <li>
                                             <label class="radio" for="late_payment_claim_action_set_field_attribute_value">
-                                                <span></span>
+                                                <span>&nbsp;</span>
                                             </label>
                                             <span class="late_payment_claim_action_attribute_value"><input type="text" name="late_payment_claim_action_set_field_attribute_value" id="late_payment_claim_action_set_field_attribute_value" maxlength="250"></span>
                                             <span class="information_category hint" style="width:25%;float:right;"></span>
@@ -670,7 +670,7 @@
             <div class="modal-footer">
                 <form id="action_selection_modal_action">
                     <button type="submit" class="btn btn-default approve">Aktion übernehmen</button>
-                    <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-default deny" data-dismiss="modal" data-bs-dismiss="modal">Abbrechen</button>
                 </form>
             </div> <!-- /.modal-footer -->
         </div> <!-- /.modal-content -->
@@ -682,7 +682,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <button type="button" class="closebtn" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 <h4 class="modal-title" id="next_execution_days_title">Gebührenmahnung pausieren</h4>
             </div>
             <div class="modal-body">
@@ -693,7 +693,7 @@
             </div> <!-- /.modal-body -->
             <div class="modal-footer">
                 <form id="action_change_late_payment_claim">
-                    <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-default deny" data-dismiss="modal" data-bs-dismiss="modal">Abbrechen</button>
                 </form>
             </div> <!-- /.modal-footer -->
         </div> <!-- /.modal-content -->
@@ -708,7 +708,7 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <button type="button" class="closebtn" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                     <h4 class="modal-title" id="action_selectionLabel">Liste der ausgewählten Benutzer</h4>
                 </div>
                 <div class="modal-body">
@@ -733,7 +733,7 @@
                 </div> <!-- /.modal-body -->
                 <div class="modal-footer">
                     <form>
-                        <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                        <button type="button" class="btn btn-default deny" data-dismiss="modal" data-bs-dismiss="modal">Abbrechen</button>
                     </form>
                 </div> <!-- /.modal-footer -->
             </div> <!-- /.modal-content -->
@@ -745,7 +745,7 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <button type="button" class="closebtn" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                     <h4 class="modal-title" id="action_selectionLabel">Wählen Sie Suchparameter für die Benutzerauswahl</h4>
                 </div>
                 <div class="modal-body">
@@ -953,7 +953,7 @@
                 <div class="modal-footer">
                     <form id="patron_selection_modal_action">
                         <button type="submit" class="btn btn-default approve">Suchparameter übernehmen</button>
-                        <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                        <button type="button" class="btn btn-default deny" data-dismiss="modal" data-bs-dismiss="modal">Abbrechen</button>
                     </form>
                 </div> <!-- /.modal-footer -->
             </div> <!-- /.modal-content -->
@@ -967,7 +967,7 @@
 [% INCLUDE 'datatables.inc' %]
 [% INCLUDE 'format_price.inc' %]
 
-    [% Asset.js("lib/jquery/plugins/jquery.dataTables.columnFilter.js") | $raw %]
+    <script src="/api/v1/contrib/latepaymentclaiming/static/js/latepaymentclaiming-datatables.js"></script>
     <script>
     
     var unban_actions = readBanActions([% unban_actions %]);
@@ -1326,9 +1326,9 @@
                                                    '<td class="latepayment_userselection_nr"></td>' + 
                                                    '<td class="latepayment_userselection_list"><ul></ul></td>' + 
                                                    '<td class="latepayment_userselection_actions">' + 
-                                                   '<a class="btn btn-xs latepayment_patron_selection_do_edit"><i class="fa fa-pencil-square-o" aria-hidden="true"></i> Bearbeiten</a>' + 
-                                                   '<a class="btn btn-xs latepayment_patron_selection_do_find"><i class="fa fa-list" aria-hidden="true"></i> Benutzerliste</a>' + 
-                                                   '<a class="btn btn-xs latepayment_patron_selection_do_delete"><i class="fa fa-times" aria-hidden="true"></i> Löschen</a>' + 
+                                                   '<a class="btn btn-default btn-xs latepayment_patron_selection_do_edit"><i class="fa fa-pencil-square-o fa-pen-to-square" aria-hidden="true"></i> Bearbeiten</a>' + 
+                                                   '<a class="btn btn-default btn-xs latepayment_patron_selection_do_find"><i class="fa fa-list" aria-hidden="true"></i> Benutzerliste</a>' + 
+                                                   '<a class="btn btn-default btn-xs latepayment_patron_selection_do_delete"><i class="fa fa-times" aria-hidden="true"></i> Löschen</a>' + 
                                                    '</td>');
         item.forEach((selection, index) => {
             addRow.find(".latepayment_userselection_list ul").append($('<li>').append(selection.description));
@@ -1352,8 +1352,8 @@
                                                    '<td class="latepayment_action_nr"></td>' + 
                                                    '<td class="latepayment_action_list"><ul></ul></td>' + 
                                                    '<td class="latepayment_actio_actions">' + 
-                                                   '<a class="btn btn-xs latepayment_action_do_edit"><i class="fa fa-pencil-square-o" aria-hidden="true"></i> Bearbeiten</a>' + 
-                                                   '<a class="btn btn-xs latepayment_action_do_delete"><i class="fa fa-times" aria-hidden="true"></i> Löschen</a>' + 
+                                                   '<a class="btn btn-default btn-xs latepayment_action_do_edit"><i class="fa fa-pencil-square-o fa-pen-to-square" aria-hidden="true"></i> Bearbeiten</a>' + 
+                                                   '<a class="btn btn-default btn-xs latepayment_action_do_delete"><i class="fa fa-times" aria-hidden="true"></i> Löschen</a>' + 
                                                    '</td>');
         addRow.find(".latepayment_action_list ul").append($('<li>').append(action.description));
 
@@ -1373,8 +1373,8 @@
                                                    '<td class="unban_action_nr"></td>' + 
                                                    '<td class="unban_action_list"><ul></ul></td>' + 
                                                    '<td class="unban_action_actions">' + 
-                                                   '<a class="btn btn-xs unban_action_do_edit"><i class="fa fa-pencil-square-o" aria-hidden="true"></i> Bearbeiten</a>' + 
-                                                   '<a class="btn btn-xs unban_action_do_delete"><i class="fa fa-times" aria-hidden="true"></i> Löschen</a>' + 
+                                                   '<a class="btn btn-default btn-xs unban_action_do_edit"><i class="fa fa-pencil-square-o fa-pen-to-square" aria-hidden="true"></i> Bearbeiten</a>' + 
+                                                   '<a class="btn btn-default btn-xs unban_action_do_delete"><i class="fa fa-times" aria-hidden="true"></i> Löschen</a>' + 
                                                    '</td>');
         addRow.find(".unban_action_list ul").append($('<li>').append(action.description));
 
@@ -1473,9 +1473,9 @@
                              return "<a href=\"/cgi-bin/koha/circ/circulation.pl?borrowernumber=" + patron_id + "\" title=\"Check out\" class=\"patron_name\" data-borrowernumber=\"" + patron_id + "\" style=\"white-space:pre-wrap;word-break:break-all;hyphens:auto;overflow-wrap:break-word;\">" + escape_str(data) + "</a>";
                          }
                     },
-                    { 
-                         name: 'surname',
-                         data: 'me.surname:me.firstname:me.middle_name:me.othernames:me.street_number:me.address:me.address2:me.city:me.state:me.postal_code:me.country',
+                    {
+                         name: 'me.surname:me.firstname:me.middle_name:me.othernames:me.streetnumber:me.address:me.address2:me.city:me.state:me.zipcode:me.country',
+                         data: 'surname',
                          sWidth: "20%",
                          render: function ( data, type, row, meta ) {
                              let patron_id = encodeURIComponent(row.patron_id);
@@ -1499,7 +1499,7 @@
                         name: 'account_balance',
                         data: 'account_balance',
                         orderable: false,
-                        sWidth: "5%",
+                        sWidth: "8%",
                         "render": function( data, type, row, meta ) {
                             let r = "<span style='text-align: right; display: block;'><a href=\"/cgi-bin/koha/members/boraccount.pl?borrowernumber="+row.patron_id+"\">";
                             let balance_str = row.account_balance || 0;
@@ -1555,7 +1555,7 @@
                     },
                     { 
                         name: 'checkouts_count:overdues_count',
-                        data: 'echeckouts',
+                        data: 'checkouts_count',
                         sWidth: "7%",
                         orderable: false,
                         "render": function( data, type, row, meta ) {
@@ -1569,7 +1569,7 @@
                     { 
                         name: 'staff_notes',
                         data: 'staff_notes',
-                        sWidth: "13%",
+                        sWidth: "10%",
                         render: function( data, type, row, meta ) {
                             return escape_str(row.staff_notes);
                         }
@@ -1601,44 +1601,23 @@
                         node.addClass("disabled");
                     }
                 }],
-                "fnServerData": function(sSource, aoData, fnCallback) {
-                    var select = { 
-                                    library_id: lateClaimConfig.library_id, 
-                                    category_id: lateClaimConfig.category_id, 
-                                    level: config.level,
-                                    patron_selection: config.patron_selections[index],
-                                    search_options: aoData
-                                 };
-                    var page = 1;
-                    var per_page = 10;
-                    var order_by = '';
-                    var sortcols = [];
-                    var colind = 0;
-                    for (var i=0; i<aoData.length;i++) {
-                        if ( aoData[i].name == 'length' ) {
-                            per_page = aoData[i].value;
-                        }
-                        if ( aoData[i].name == 'columns' ) {
-                            colind = i;
-                        }
-                    }
-                    for (var i=0; i<aoData.length;i++) {
-                        if ( aoData[i].name == 'start' ) {
-                            page = (aoData[i].value / per_page) + 1;
-                        }
-                    }
-                    for (var i=0; i<aoData.length; i++) {
-                        if ( aoData[i].name == 'order' ) {
-                            var orderArray = new Array();
-                            for (var k=0; k<aoData[i].value.length; k++) {
-                                var colnum = aoData[i].value[k].column;
-                                var sortcol = aoData[colind].value[colnum].data.split(':');
-                                var sortdir = aoData[i].value[k].dir == 'asc' ? '+' : '-';
-                                Array.prototype.push.apply(orderArray,sortcol.map(x => sortdir + (!x.includes('.')?'me.'+x:x)));
-                            }
-                            order_by = orderArray.filter((v, i, a) => a.indexOf(v) === i).join(',');
-                        }
-                    }
+                "ajax": function(data, callback, settings) {
+                    var paging = lmscPaging(data);
+                    var page = paging._page;
+                    var per_page = paging._per_page;
+                    var order_by = lmscOrderBy(data, { splitCompound: true, qualifyPrefix: 'me.', sourceField: 'name' });
+
+                    var select = {
+                        library_id: lateClaimConfig.library_id,
+                        category_id: lateClaimConfig.category_id,
+                        level: config.level,
+                        patron_selection: config.patron_selections[index],
+                        search_options: [
+                            { name: 'draw', value: data.draw },
+                            { name: 'search', value: data.search }
+                        ]
+                    };
+
                     var url = '/api/v1/contrib/latepaymentclaiming/patrons/list?_page=' + encodeURIComponent(page) + '&_per_page=' + encodeURIComponent(per_page) + '&_order_by=' + encodeURIComponent(order_by);
                     $.ajax({
                         dataType: 'json',
@@ -1650,7 +1629,7 @@
                             request.setRequestHeader("x-koha-embed","extended_attributes,checkouts+count,overdues+count,account_balance");
                         },
                         success: function(json){
-                            fnCallback(json);
+                            callback(json);
                         }
                     })
                 },
@@ -1967,10 +1946,21 @@
         return searchfields;
     }
     
+    /*
+     * Koha 22.11 (Bootstrap 3) puts "active" on the tab <li> (the tab
+     * link's parent); Koha 25.11's rewritten "tab_item" macro
+     * (html_helpers.inc) puts it on the tab <a> itself instead. Check both
+     * so the currently active tab is found on either Koha version.
+     */
+    function isTabActive(tabname) {
+        var $tab = $("a[data-tabname='" + tabname + "']");
+        return $tab.hasClass("active") || $tab.parent().hasClass("active");
+    }
+
     function getActionParams() {
         var action = {};
         var description ='';
-        if ( $("a[data-tabname='action_claim_tab'").parent().hasClass("active") ) {
+        if ( isTabActive('action_claim_tab') ) {
             $("#late_payment_claim_action_letter_charge_description").val(stripHtml($("#late_payment_claim_action_letter_charge_description").val()));
             $("#late_payment_claim_action_letter_charge_note").val(stripHtml($("#late_payment_claim_action_letter_charge_note").val()));
             
@@ -1997,7 +1987,7 @@
                          description: description
                      };
         }
-        else if ( $("a[data-tabname='action_fee_tab'").parent().hasClass("active") ) {
+        else if ( isTabActive('action_fee_tab') ) {
             $("#late_payment_claim_action_fee_description").val(stripHtml($("#late_payment_claim_action_fee_description").val()));
             $("#late_payment_claim_action_fee_note").val(stripHtml($("#late_payment_claim_action_fee_note").val()));
             
@@ -2019,7 +2009,7 @@
                          description: description
                      };
         }
-        else if ( $("a[data-tabname='action_debarement_tab'").parent().hasClass("active") ) {
+        else if ( isTabActive('action_debarement_tab') ) {
             $("#late_payment_claim_action_debarement_comment").val(stripHtml($("#late_payment_claim_action_debarement_comment").val()));
             $("#late_payment_claim_action_debarement_expiration").val(stripHtml($("#late_payment_claim_action_debarement_expiration").val()));
             
@@ -2046,7 +2036,7 @@
                          description: description
                      };
         }
-        else if ( $("a[data-tabname='action_debarement_delete_tab'").parent().hasClass("active") ) {
+        else if ( isTabActive('action_debarement_delete_tab') ) {
             var delete_debarement_types = '';
             if ( $("#late_payment_claim_action_delete_debarement_all").prop('checked') ) {
                 description = 'Lösche alle Sperren';
@@ -2066,7 +2056,7 @@
                          description: description
                      };
         }
-        else if ( $("a[data-tabname='action_user_value_tab'").parent().hasClass("active") ) {
+        else if ( isTabActive('action_user_value_tab') ) {
             $("#late_payment_claim_action_set_field_borrowernotes").val(stripHtml($("#late_payment_claim_action_set_field_borrowernotes").val()));
             $("#late_payment_claim_action_set_field_opacnote").val(stripHtml($("#late_payment_claim_action_set_field_opacnote").val()));
             $("#late_payment_claim_action_set_field_attribute_value").val(stripHtml($("#late_payment_claim_action_set_field_attribute_value").val()));
@@ -2123,7 +2113,7 @@
                          description: description
                      };
         }
-        else if ( $("a[data-tabname='action_add_list_tab'").parent().hasClass("active") ) {
+        else if ( isTabActive('action_add_list_tab') ) {
             if ( $("#late_payment_claim_action_patron_list_add").prop('checked') ) {
                 description = 'Hinzufügen zur Benutzerliste "' + $("#late_payment_claim_action_patron_list option:selected").text() + '"';
             }
@@ -2449,6 +2439,21 @@
      
     </script>
     
-    [% PROCESS patron_search_js table_id => 'memberresultst', categories => categories, libraries => libraries, extended_attribute_types => attribute_type_codes, columns => columns, filter => filter, actions => [selection_type], preview_on_name_click => 1, callback => callback %]
+    <script>
+        /*
+         * Koha 25.11's rewritten "patron_search_js" macro (patron-search.inc)
+         * assumes a real DataTable exists for its "table_id" and throws
+         * ("patrons_table is undefined") when it doesn't - this plugin has
+         * never rendered a #memberresultst table, so the call was always
+         * inert, just silent on 22.11's older macro. $patron_to_html /
+         * $format_address / $get_age are already loaded globally
+         * (js_includes.inc), so only the lookup maps this plugin's own code
+         * actually uses are built here.
+         */
+        var libraries_map = [% libraries.json %].reduce(function(map, e) { map[e.branchcode] = e; return map; }, {});
+        var categories_map = [% categories.json %].reduce(function(map, e) { map[e.categorycode.toLowerCase()] = e; return map; }, {});
+        var singleBranchMode = '[% singleBranchMode | html %]';
+        var logged_in_library_id = "[% Branches.GetLoggedInBranchcode | html %]";
+    </script>
 [% END %]
 [% INCLUDE 'intranet-bottom.inc' %]

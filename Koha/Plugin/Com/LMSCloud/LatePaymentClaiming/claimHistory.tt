@@ -93,14 +93,14 @@
                                 <th>Mahnfall</th>
                                 <th>Ausweisnummer</th>
                                 <th>Benutzer</th>
-                                <th>Auswahl Bibliothek</th>
-                                <th>Auswahl Kate&shy;gorie</th>
-                                <th>Auswahl Vorgang</th>
+                                <th>Bibliothek</th>
+                                <th>Kate&shy;gorie</th>
+                                <th>Vorgang</th>
                                 <th>Mahn&shy;stufe</th>
                                 <th>Notiz</th>
                                 <th>Gebüh&shy;ren&shy;stand</th>
-                                <th></th>
-                                <th></th>
+                                <th>Selektion</th>
+                                <th>Aktion(en)</th>
                             </tr>
                             <tr>
                                 <th>Zeit&shy;punkt</th>
@@ -113,8 +113,8 @@
                                 <th>Mahn&shy;stufe</th>
                                 <th>Notiz</th>
                                 <th>Gebühren&shy;stand</th>
-                                <th>Selektion</th>
-                                <th>Aktion(en)</th>
+                                <th></th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -131,7 +131,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <button type="button" class="closebtn" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 <h4 class="modal-title" id="show_selections_details_title">Selektionen</h4>
             </div>
             <div class="modal-body">
@@ -142,7 +142,7 @@
             </div> <!-- /.modal-body -->
             <div class="modal-footer">
                 <form id="show_selections_actions">
-                    <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-default deny" data-dismiss="modal" data-bs-dismiss="modal">Abbrechen</button>
                 </form>
             </div> <!-- /.modal-footer -->
         </div> <!-- /.modal-content -->
@@ -154,7 +154,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="closebtn" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <button type="button" class="closebtn" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 <h4 class="modal-title" id="show_banactions_details_title">Aktionen</h4>
             </div>
             <div class="modal-body">
@@ -165,7 +165,7 @@
             </div> <!-- /.modal-body -->
             <div class="modal-footer">
                 <form id="show_selections_actions">
-                    <button type="button" class="btn btn-default deny" data-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-default deny" data-dismiss="modal" data-bs-dismiss="modal">Abbrechen</button>
                 </form>
             </div> <!-- /.modal-footer -->
         </div> <!-- /.modal-content -->
@@ -176,29 +176,12 @@
     [% INCLUDE 'calendar.inc' %]
     [% INCLUDE 'datatables.inc' %]
     [% INCLUDE 'select2.inc' %]
-    [% Asset.js("lib/jquery/plugins/jquery.dataTables.columnFilter.js") | $raw %]
+    <script src="/api/v1/contrib/latepaymentclaiming/static/js/latepaymentclaiming-datatables.js"></script>
     <script>
         [% IF action == 'list' %]
         
             var actionIdList = '[% actionIdList | html %]';
 
-            function fnCreateDateRangeInput(oTable) {
-                // console.log("fnCreateDateRangeInput",oTable);
-                var th = $('#latePaymentClaimsHitory thead tr:nth-child(2) th:nth-child(6)');
-                th.html('<span id="addFromFlatPickr">Von</span> <input type="text" class="date_range_filter flatpickr" id="latePaymentClaimHistory_range_from_4" rel="4" size="10"><br>' + 
-                        '<span id="toFromFlatPickr">bis</span> <input type="text" class="date_range_filter flatpickr" id="latePaymentClaimHistory_range_to_4" rel="4" size="10">');
-                flatpickr("#latePaymentClaimHistory_range_from_4", {  });
-                flatpickr("#latePaymentClaimHistory_range_to_4", {  });
-            }
-            
-            function fnCreateDateRangeInput(oTable) {
-                var th = $('#latePaymentClaimHistory thead tr:nth-child(2) th:nth-child(1)');
-                th.html('<span id="addFromFlatPickr">Von</span> <input type="text" class="date_range_filter flatpickr" id="latePaymentClaimHistory_range_from_1" rel="4" size="10"><br>' + 
-                        '<span id="toFromFlatPickr">bis</span> <input type="text" class="date_range_filter flatpickr" id="latePaymentClaimHistory_range_to_1" rel="4" size="10">');
-                flatpickr("#latePaymentClaimHistory_range_from_1", {  });
-                flatpickr("#latePaymentClaimHistory_range_to_1", {  });
-            }
-            
             var claimList;
             $(document).ready(function() {
                 claimList = $("#latePaymentClaimHistory").dataTable($.extend(true, {}, dataTablesDefaults, {
@@ -210,6 +193,7 @@
                     'pagingType': 'full_numbers',
                     'processing': true,
                     'fixedHeader': true,
+                    'orderCellsTop': true,
                     'columns': [
                         { 
                             name: 'action_timestamp',
@@ -238,7 +222,7 @@
                         },
                         {
                             'name': 'surname',
-                            'data': 'patron',
+                            'data': 'surname',
                             'sWidth': "15%",
                              render: function ( data, type, row, meta ) {
                                  let patron_id = encodeURIComponent(row.patron_id);
@@ -386,8 +370,6 @@
                             "sPrevious":   "Vorige"
                         },
                     },
-                    "ajax": '/api/v1/contrib/latepaymentclaiming/late_payment_claim_history',
-                    "sAjaxSource": '/api/v1/contrib/latepaymentclaiming/late_payment_claim_history',
                     drawCallback: function (settings) {
                         $('.show_patron_selection_details a').click(function() {
                             $('#showSelectionsDetail').html('<ul>'+$(this).parent().find('ul').html()+'</ul>');
@@ -400,108 +382,80 @@
                             modal.modal("show");
                         } );
                     },
-                    "fnServerData": function(sSource, params, fnCallback) {
-                        // console.log(params);
-                        let readParams = {};
-                        for (let i=0;i<params.length;i++) {
-                            readParams[params[i].name] = params[i].value;
-                        }
-                        let searchParams = { 
-                           '_per_page': readParams['iDisplayLength'],
-                           '_page': (readParams['iDisplayStart'] / readParams['iDisplayLength']) + 1,
-                           'draw': readParams['sEcho']
-                        };
-                        for (let i=0;i<readParams['iColumns'];i++) {
-                            var field = readParams['mDataProp_' + i];
-                            if ( field == 'library_id' ) field = 'library';
-                            else if ( field == 'category_id' ) field = 'category';
-                            if ( field.length > 0 && readParams['sSearch_' + i].length > 0 ) {
-                                if (  field != "action_timestamp" && field != 'action_account_balance' ) {
-                                    searchParams[field] = readParams['sSearch_' + i];
-                                }
-                                else if ( field == 'action_account_balance' ) {
-                                    var amounts = readParams['sSearch_' + i].split('~');
-                                    if ( amounts[0] && amounts[0].length > 0 ) {
-                                        searchParams['action_account_balance_from'] = amounts[0];
-                                    }
-                                    if ( amounts[1] && amounts[1].length > 0 ) {
-                                        searchParams['action_account_balance_to'] = amounts[1];
-                                    }
-                                }
+                    "ajax": function(data, callback, settings) {
+                        var fieldMap = { library_id: 'library', category_id: 'category' };
+                        var params = lmscPaging(data);
+                        data.columns.forEach(function(column) {
+                            if ( !column.search || !column.search.value ) return;
+                            var field = fieldMap[column.data] || column.data;
+                            if ( field == 'action_timestamp' || field == 'action_account_balance' ) {
+                                var range = lmscSplitRange(column.search.value);
+                                if ( range.from ) params[field + '_from'] = range.from;
+                                if ( range.to ) params[field + '_to'] = range.to;
+                            } else if ( field ) {
+                                params[field] = column.search.value;
                             }
-                        }
-                        if ( $("#latePaymentClaimHistory_range_from_1").val() && $("#latePaymentClaimHistory_range_from_1").val().length > 0 ) {
-                            searchParams['action_timestamp_from'] = $("#latePaymentClaimHistory_range_from_1").val();
-                        }
-                        if ( $("#latePaymentClaimHistory_range_to_1").val() && $("#latePaymentClaimHistory_range_to_1").val().length > 0 ) {
-                            searchParams['action_timestamp_to'] = $("#latePaymentClaimHistory_range_to_1").val();
-                        }
-                        let sortFields = [];
-                        for (let i=0;i<readParams['iSortingCols'];i++) {
-                            var field = readParams['mDataProp_' + readParams['iSortCol_' + i]];
-                            var direction = readParams['sSortDir_' + i];
-                            if ( field == 'library_id' ) field = 'library';
-                            else if ( field == 'category_id' ) field = 'category';
-                            if ( field.length > 0 ) {
-                                if ( direction == 'desc' ) sortFields.push("-"+field);
-                                else sortFields.push("+"+field);
-                            }
-                        }
-                        if ( readParams['sSearch'].length > 0 ) {
-                            searchParams['_search'] = readParams['sSearch'];
+                        });
+                        if ( data.search && data.search.value ) {
+                            params['_search'] = data.search.value;
                         }
                         if ( actionIdList.length > 0 ) {
-                            searchParams['actionIdList'] = actionIdList;
+                            params['actionIdList'] = actionIdList;
                         }
-                        searchParams['_order_by'] = sortFields.join(",");
+                        params['_order_by'] = lmscOrderBy(data, { fieldMap: fieldMap });
                         $.ajax({
                             'dataType': 'json',
                             'type': 'GET',
-                            'url': sSource,
-                            'data': searchParams,
+                            'url': '/api/v1/contrib/latepaymentclaiming/late_payment_claim_history',
+                            'data': params,
                             'success': function(json){
-                                fnCallback(json);
+                                callback(json);
                             }
                         });
                     },
-                })).columnFilter({
-                    'sPlaceHolder': 'head:after',
-                    'sRangeFormat': 'Von {from}<br>bis {to}',
-                    'aoColumns': [
-                        { 'type': 'date-range' },
-                        { 'type': 'text' },
-                        { 'type': 'text' },
-                        { 'type': 'text' },
-                        { 'type': 'select', 'values': [% branches.json %] },
-                        { 'type': 'select', 'values': [% categorylist.json %]  },
-                        { 'type': 'select', 'values': [
-                                                       {"label":"Abgeschlossen","value":"close"},
-                                                       {"label":"Gebühr beglichen","value":"paid"},
-                                                       {"label":"Kommentiert","value":"comment"},
-                                                       {"label":"Mahnfall erfasst","value":"added"},
-                                                       {"label":"Mahnung","value":"claimed"},
-                                                       {"label":"Pausiert","value":"pause"},
-                                                       {"label":"Reaktiviert","value":"reopen"}
-                                                       ] },
-                        { 'type': 'text' },
-                        { 'type': 'text' },
-                        { 'type': 'number-range' },
-                        null,
-                        null
-                    ]
-                });
-                
-                // claimList.api().columns.adjust().draw();
+                }));
 
-                $('input#latePaymentClaimHistory_range_from_1,input#latePaymentClaimHistory_range_to_1').change(function (event) {
-                    event.target._flatpickr.close();
-                    $(".clear_date").first().focus();
-                    claimList.api().columns.adjust().draw();
-                });
+                lmscBuildFilterRow(claimList.api(), [
+                    { type: 'date-range' },
+                    { type: 'text' },
+                    { type: 'text' },
+                    { type: 'text' },
+                    { type: 'select', values: [% branches.json %] },
+                    { type: 'select', values: [% categorylist.json %]  },
+                    { type: 'select', values: [
+                                                   {"label":"Abgeschlossen","value":"close"},
+                                                   {"label":"Gebühr beglichen","value":"paid"},
+                                                   {"label":"Kommentiert","value":"comment"},
+                                                   {"label":"Mahnfall erfasst","value":"added"},
+                                                   {"label":"Mahnung","value":"claimed"},
+                                                   {"label":"Pausiert","value":"pause"},
+                                                   {"label":"Reaktiviert","value":"reopen"}
+                                                   ] },
+                    { type: 'text' },
+                    { type: 'text' },
+                    { type: 'number-range' },
+                    null,
+                    null
+                ]);
             });
         [% END %]
     </script>
 
-    [% PROCESS patron_search_js table_id => 'memberresultst', categories => categories, libraries => libraries, extended_attribute_types => attribute_type_codes, columns => columns, filter => filter, actions => [selection_type], preview_on_name_click => 1, callback => callback %]
+    <script>
+        /*
+         * Koha 25.11's rewritten "patron_search_js" macro (patron-search.inc)
+         * assumes a real DataTable exists for its "table_id" and throws
+         * ("patrons_table is undefined") when it doesn't - this plugin has
+         * never rendered a #memberresultst table, so the call was always
+         * inert, just silent on 22.11's older macro. $patron_to_html /
+         * $format_address / $get_age are already loaded globally
+         * (js_includes.inc), so only the lookup maps this plugin's own code
+         * actually uses are built here.
+         */
+        var libraries_map = [% libraries.json %].reduce(function(map, e) { map[e.branchcode] = e; return map; }, {});
+        var categories_map = [% categories.json %].reduce(function(map, e) { map[e.categorycode.toLowerCase()] = e; return map; }, {});
+        var singleBranchMode = '[% singleBranchMode | html %]';
+        var logged_in_library_id = "[% Branches.GetLoggedInBranchcode | html %]";
+    </script>
 [% END %]
 [% INCLUDE 'intranet-bottom.inc' %]
