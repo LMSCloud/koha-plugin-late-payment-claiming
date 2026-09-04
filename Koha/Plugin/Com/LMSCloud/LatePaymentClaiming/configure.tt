@@ -215,7 +215,7 @@
                     </fieldset>
                 </form>
 
-                <form method="put">
+                <form>
                     <fieldset class="rows">
 
                         <legend>Mahnkonfigurationen</legend>
