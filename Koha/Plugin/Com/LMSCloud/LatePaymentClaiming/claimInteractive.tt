@@ -71,9 +71,11 @@
                         Bei mehr als [% countClaimsLimit %] anstehenden Gebührenmahnungen müssen die Gebührenmahnungen im Tageslauf durchgeführt werden.
                     </p>
                     [% IF patronsToClaim.size > 0 && patronsToClaim.size <= countClaimsLimit %]
-                    <form method="get" id="start_claiming_action">
+                    <form method="post" id="start_claiming_action">
                         <input type="hidden" name="class" value="[% CLASS %]"/>
                         <input type="hidden" name="method" value="[% METHOD %]"/>
+                        [%# Koha's CSRF middleware rejects any POST without a token; the include is missing before 24.05 %]
+                        [% TRY %][% PROCESS 'csrf-token.inc' %][% CATCH %][% END %]
                         <input type="hidden" name="do" value="start"/>
                         <input type="hidden" name="toolaction" value="claimInteractive"/>
                         

@@ -64,6 +64,8 @@
                 
                     <input type="hidden" name="class" value="[% CLASS %]"/>
                     <input type="hidden" name="method" value="[% METHOD %]"/>
+                    [%# Koha's CSRF middleware rejects any POST without a token; the include is missing before 24.05 %]
+                    [% TRY %][% PROCESS 'csrf-token.inc' %][% CATCH %][% END %]
                     
                     <fieldset class="rows">
 
