@@ -24,6 +24,7 @@ use DateTime;
 use DateTime::Event::Cron;
 
 use Koha::Calendar;
+use Koha::DateUtils qw( dt_from_string );
 
 sub new {
     my ( $class ) = @_;
@@ -57,7 +58,9 @@ sub getNextDay {
     my ($self,$dayCron,$monthCron,$weekdayCron,$start,$execOnClosingDays,$execOnClosingDayLibrary,$checkRes) = @_;
     
     my $startDate = DateTime->new(year => $start->year, month => $start->month, day => $start->day);
-    my $today = DateTime->now();
+    # Use the Koha time zone: DateTime->now() is UTC, which is still the previous
+    # day for nightly jobs started between 00:00 and 02:00 local summer time.
+    my $today = dt_from_string();
     my $todayCompare = DateTime->new(year => $today->year, month => $today->month, day => $today->day);
     
     my $checkResult;

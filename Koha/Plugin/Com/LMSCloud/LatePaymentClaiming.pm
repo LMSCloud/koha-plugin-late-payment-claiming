@@ -40,14 +40,14 @@ use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfigu
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming;
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution;
 
-our $VERSION = "1.1.1";
+our $VERSION = "1.1.2";
 our $MINIMUM_VERSION = "22.11";
 
 our $metadata = {
     name            => 'Gebührenmahnung',
     author          => 'LMSCloud GmbH',
     date_authored   => '2026-02-15',
-    date_updated    => "2026-09-04",
+    date_updated    => "2026-10-13",
     minimum_version => $MINIMUM_VERSION,
     maximum_version => undef,
     version         => $VERSION,
@@ -224,7 +224,8 @@ sub cronjob_nightly {
 
     my $cron = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution->new();
     
-    my $startdate = DateTime->now()->subtract(days => 1);
+    my $today = dt_from_string();    # Koha time zone, same as the stored last_run
+    my $startdate = $today->clone()->subtract(days => 1);
     my $lastrun = $self->retrieve_data('last_run');
     if ( $lastrun ) {
         $startdate = dt_from_string($lastrun);
@@ -238,7 +239,7 @@ sub cronjob_nightly {
                         $execution_on_closing_days,
                         $execution_on_closing_days_library);
     if ( $result->{ok} ) {
-        if ( $result->{next}->ymd('-') eq DateTime->now()->ymd('-') ) {
+        if ( $result->{next}->ymd('-') eq $today->ymd('-') ) {
             my $doClaim = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming->new();
             $doClaim->claimPatronsOfAllConfigurations();
             $self->store_data({ last_run => dt_from_string()->ymd('-') });
