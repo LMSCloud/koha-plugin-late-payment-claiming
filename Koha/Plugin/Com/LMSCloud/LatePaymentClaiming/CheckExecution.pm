@@ -23,8 +23,21 @@ use Data::Dumper;
 use DateTime;
 use DateTime::Event::Cron;
 
-use Koha::Calendar;
 use Koha::DateUtils qw( dt_from_string );
+
+use Module::Load qw(load);
+use Module::Load::Conditional qw(check_install);
+
+# Koha::Calendar was moved to Koha::Library::Calendar in newer Koha versions
+my $CALENDAR_CLASS;
+
+BEGIN {
+    $CALENDAR_CLASS =
+        check_install( module => 'Koha::Library::Calendar' )
+        ? 'Koha::Library::Calendar'
+        : 'Koha::Calendar';
+    load $CALENDAR_CLASS;
+}
 
 sub new {
     my ( $class ) = @_;
@@ -133,7 +146,7 @@ sub getNextDay {
             $startDate = $nextDay;
             
             if ( $execOnClosingDays && $execOnClosingDayLibrary ) {
-                my $calendar = Koha::Calendar->new( branchcode => $execOnClosingDayLibrary );
+                my $calendar = $CALENDAR_CLASS->new( branchcode => $execOnClosingDayLibrary );
                 if ( $execOnClosingDays eq 'no' ) {
                     my $maxCycles = $self->{maxIterations};
                     while ( $calendar->is_holiday($nextDay) && $maxCycles-- > 0) {
@@ -172,7 +185,7 @@ sub compareDatesAndCheckClosingDay {
 
     if ( $cmp == 0 && $execOnClosingDays && $execOnClosingDayLibrary ) {
         # check Koha calendar
-        my $calendar = Koha::Calendar->new( branchcode => $execOnClosingDayLibrary );
+        my $calendar = $CALENDAR_CLASS->new( branchcode => $execOnClosingDayLibrary );
         if ( $execOnClosingDays eq 'delay' ) {
             my $maxCycles = $self->{maxIterations};
             while ( $calendar->is_holiday($useDate) && $maxCycles-- >= 1 ) {
