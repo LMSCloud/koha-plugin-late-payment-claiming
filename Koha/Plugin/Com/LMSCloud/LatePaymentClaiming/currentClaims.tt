@@ -783,16 +783,19 @@
         [% END %]
     </script>
     
+    [% TRY %][% INCLUDE 'js-patron-format.inc' %][% CATCH %][% END %]
     <script>
         /*
          * Koha 25.11's rewritten "patron_search_js" macro (patron-search.inc)
          * assumes a real DataTable exists for its "table_id" and throws
          * ("patrons_table is undefined") when it doesn't - this plugin has
          * never rendered a #memberresultst table, so the call was always
-         * inert, just silent on 22.11's older macro. $patron_to_html /
-         * $format_address / $get_age are already loaded globally
-         * (js_includes.inc), so only the lookup maps this plugin's own code
-         * actually uses are built here.
+         * inert, just silent on 22.11's older macro. $format_address and
+         * $get_age are loaded globally (js_includes.inc) on both versions;
+         * $patron_to_html is global on 25.11 only (patron-format.js), on
+         * 22.11 it comes from js-patron-format.inc (included just above,
+         * skipped where that file no longer exists). The lookup maps this
+         * plugin's own code actually uses are built here.
          */
         var libraries_map = [% libraries.json %].reduce(function(map, e) { map[e.branchcode] = e; return map; }, {});
         var categories_map = [% categories.json %].reduce(function(map, e) { map[e.categorycode.toLowerCase()] = e; return map; }, {});
