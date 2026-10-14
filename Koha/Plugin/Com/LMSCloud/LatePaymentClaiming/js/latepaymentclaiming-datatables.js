@@ -207,3 +207,51 @@ function lmscBuildFilterRow(dt, columnDefs) {
         }
     });
 }
+
+/*
+ * Fallback for Koha 22.11: "$patron_to_html" is only defined globally from
+ * Koha 25.11 on (patron-format.js). On 22.11 it lives in
+ * js-patron-format.inc, which is only pulled in by the "patron_search_js"
+ * template macro this plugin does not use (and which no longer exists as a
+ * separate include in 25.11, so it cannot be included from the templates).
+ * Same code as Koha 22.11's js-patron-format.inc; skipped when Koha already
+ * provides the function.
+ */
+if (typeof window.$patron_to_html === "undefined") {
+    window.$patron_to_html = function (patron, config) {
+        if (patron == null) {
+            return "";
+        }
+
+        var firstname = escape_str(patron.firstname);
+        var surname = escape_str(patron.surname);
+
+        if (patron.middle_name != null && patron.middle_name != "") {
+            firstname += " " + escape_str(patron.middle_name);
+        }
+        if (patron.other_name != null && patron.other_name != "") {
+            firstname += " (" + escape_str(patron.other_name) + ")";
+        }
+
+        var name;
+        if (config && config.invert_name) {
+            name = surname + (firstname ? ", " + firstname : "");
+        } else {
+            name = firstname + " " + surname;
+        }
+
+        if (config && config.display_cardnumber) {
+            name = name + " (" + escape_str(patron.cardnumber) + ")";
+        }
+
+        if (config && config.url) {
+            if (config.url === "circulation_reserves") {
+                name = '<a href="/cgi-bin/koha/circ/circulation.pl?borrowernumber=' + encodeURIComponent(patron.patron_id) + '#reserves">' + name + "</a>";
+            } else {
+                name = '<a href="/cgi-bin/koha/members/moremember.pl?borrowernumber=' + encodeURIComponent(patron.patron_id) + '">' + name + "</a>";
+            }
+        }
+
+        return name;
+    };
+}
