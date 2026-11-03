@@ -2060,7 +2060,9 @@
         else if ( isTabActive('action_user_value_tab') ) {
             $("#late_payment_claim_action_set_field_borrowernotes").val(stripHtml($("#late_payment_claim_action_set_field_borrowernotes").val()));
             $("#late_payment_claim_action_set_field_opacnote").val(stripHtml($("#late_payment_claim_action_set_field_opacnote").val()));
-            $("#late_payment_claim_action_set_field_attribute_value").val(stripHtml($("#late_payment_claim_action_set_field_attribute_value").val()));
+            if ( $("#late_payment_claim_action_set_field_attribute_value").length > 0 ) {
+                $("#late_payment_claim_action_set_field_attribute_value").val(stripHtml($("#late_payment_claim_action_set_field_attribute_value").val()));
+            }
             
             if ( $("#late_payment_claim_action_set_field_categorycode").val().length > 0 ) {
                 if ( description.length > 0 ) description += ", ";
@@ -2086,7 +2088,7 @@
                 if ( description.length > 0 ) description += ", ";
                 description += ' das Ablaufdatum "' + $("#late_payment_claim_action_set_field_dateexpiry_action option:selected").text() + '"';
             }
-            if ( $("#late_payment_claim_action_set_field_attribute_value").val().length > 0 ) {
+            if ( $("#late_payment_claim_action_set_field_attribute_value").length > 0 && $("#late_payment_claim_action_set_field_attribute_value").val().length > 0 ) {
                 if ( description.length > 0 ) description += ", ";
                 if ( $('#late_payment_claim_action_set_field_attribute_value').get(0).tagName == "INPUT" ) {
                     description += ' das Benutzerattribut "' + $("#late_payment_claim_action_set_field_attribute_code option:selected").text() + '" auf den Wert "' +
@@ -2358,12 +2360,18 @@
         $("#late_payment_claim_action_set_field_opacnote").val('');
         $("#late_payment_claim_action_set_field_opacnote_append").prop('checked',true);
         $('#late_payment_claim_action_set_field_dateexpiry_action')[0].selectedIndex = 0;
-        $('#late_payment_claim_action_set_field_attribute_code')[0].selectedIndex = 0;
-        if ( $('#late_payment_claim_action_set_field_attribute_value').get(0).tagName == "INPUT" ) {
-            $("#late_payment_claim_action_set_field_attribute_value").val('');
+        // The patron attribute fields are only rendered if extended patron
+        // attributes are configured, so they may not exist at all.
+        if ( $('#late_payment_claim_action_set_field_attribute_code').length > 0 ) {
+            $('#late_payment_claim_action_set_field_attribute_code')[0].selectedIndex = 0;
         }
-        else if ( $('#late_payment_claim_action_set_field_attribute_value').get(0).tagName == "SELECT" ) {
-            $('#late_payment_claim_action_set_field_attribute_value')[0].selectedIndex = 0;
+        if ( $('#late_payment_claim_action_set_field_attribute_value').length > 0 ) {
+            if ( $('#late_payment_claim_action_set_field_attribute_value').get(0).tagName == "INPUT" ) {
+                $("#late_payment_claim_action_set_field_attribute_value").val('');
+            }
+            else if ( $('#late_payment_claim_action_set_field_attribute_value').get(0).tagName == "SELECT" ) {
+                $('#late_payment_claim_action_set_field_attribute_value')[0].selectedIndex = 0;
+            }
         }
         
         $('#late_payment_claim_action_patron_list')[0].selectedIndex = 0;
