@@ -456,6 +456,7 @@
                             [% WRAPPER tab_item tabname= "action_debarement_delete_tab" %] <span>Sperre löschen</span> [% END %]
                             [% WRAPPER tab_item tabname= "action_user_value_tab" %] <span>Feldwert</span> [% END %]
                             [% WRAPPER tab_item tabname= "action_add_list_tab" %] <span>Benutzerliste</span> [% END %]
+                            [% WRAPPER tab_item tabname= "action_remove_notes_tab" %] <span>Hinweis entfernen</span> [% END %]
                         [% END # /WRAPPER action_tabs_nav %]
                         [% WRAPPER tab_panels %]
                             [% WRAPPER tab_panel tabname="action_claim_tab" bt_active=1 %]
@@ -671,6 +672,27 @@
                                             <label for="late_payment_claim_action_patron_list_add">Hinzufügen</label>
                                             <input type="radio" id="late_payment_claim_action_patron_list_delete" name="late_payment_claim_action_patron_list_change" value="delete" /> 
                                             <label for="late_payment_claim_action_patron_list_delete">Löschen</label>
+                                        </label>
+                                    </li>
+                                </ol>
+                            </fieldset>
+                            [% END %]
+                            [% WRAPPER tab_panel tabname="action_remove_notes_tab" %]
+                            <fieldset class="rows">
+                                <legend>Vom Mahnlauf gesetzte Hinweise entfernen</legend>
+                                <p>
+                                    Entfernt die Texte, die die Gebührenmahnungen des Mahnfalls zuvor in die Notizen des Benutzers geschrieben haben.
+                                    Von Hand geänderte oder ergänzte Notizen bleiben erhalten.
+                                </p>
+                                <ol class="radio">
+                                    <li>
+                                        <label class="radio" for="late_payment_claim_action_remove_notes_borrowernotes">
+                                            <input type="checkbox" id="late_payment_claim_action_remove_notes_borrowernotes" name="late_payment_claim_action_remove_notes_borrowernotes" value="1" checked>Ausleihnotiz
+                                        </label>
+                                    </li>
+                                    <li>
+                                        <label class="radio" for="late_payment_claim_action_remove_notes_opacnote">
+                                            <input type="checkbox" id="late_payment_claim_action_remove_notes_opacnote" name="late_payment_claim_action_remove_notes_opacnote" value="1" checked>OPAC-Notiz
                                         </label>
                                     </li>
                                 </ol>
@@ -1736,10 +1758,23 @@
         modal.modal("show");
     }
     
+    /*
+     * The action "remove notes" undoes what the claiming run wrote into a claim case's
+     * notes, so it is only offered for the actions of the automatic closing of a claim case.
+     */
+    function setRemoveNotesTabVisible(visible) {
+        var $tab = $("a[data-tabname='action_remove_notes_tab']");
+        if ( !visible && isTabActive('action_remove_notes_tab') ) {
+            $("a[data-tabname='action_claim_tab']").click();
+        }
+        $tab.closest('li').toggle(visible);
+    }
+    
     function editLatePaymentActionList(level,index) {
         var modal = $("#action_selection");
         var config = getLateClaimConfigLevelConfiguration(level);
         var action = config.ban_actions[index];
+        setRemoveNotesTabVisible(false);
         resetActionParams();
         setActionParams(action);
         $('#add_latepayment_action_form').data("level",level);
@@ -1750,6 +1785,7 @@
     function editUnbanAction(index) {
         var modal = $("#action_selection");
         var action = unban_actions[index];
+        setRemoveNotesTabVisible(true);
         resetActionParams();
         setActionParams(action);
         $('#add_latepayment_action_form').data("level","base");
@@ -2016,6 +2052,7 @@
     
     function newClaimLevelAction(level) {
         var modal = $("#action_selection");
+        setRemoveNotesTabVisible(false);
         resetActionParams();
         $('#add_latepayment_action_form').data("level",level);
         $('#add_latepayment_action_form').data("index","new");
@@ -2024,6 +2061,7 @@
     
     function newUnbanAction() {
         var modal = $("#action_selection");
+        setRemoveNotesTabVisible(true);
         resetActionParams();
         $('#add_latepayment_action_form').data("level","base");
         $('#add_latepayment_action_form').data("index","new");
@@ -2430,6 +2468,31 @@
                          description: description
                      };
         }
+        else if ( isTabActive('action_remove_notes_tab') ) {
+            var removeBorrowernotes = $("#late_payment_claim_action_remove_notes_borrowernotes").prop('checked');
+            var removeOpacnote = $("#late_payment_claim_action_remove_notes_opacnote").prop('checked');
+            if ( !removeBorrowernotes && !removeOpacnote ) {
+                alert('Bitte wählen Sie mindestens eine Notiz aus.');
+                return false;
+            }
+            if ( removeBorrowernotes && removeOpacnote ) {
+                description = 'Entferne die vom Mahnlauf gesetzten Hinweise aus der Ausleihnotiz und der OPAC-Notiz';
+            }
+            else if ( removeBorrowernotes ) {
+                description = 'Entferne die vom Mahnlauf gesetzten Hinweise aus der Ausleihnotiz';
+            }
+            else {
+                description = 'Entferne die vom Mahnlauf gesetzten Hinweise aus der OPAC-Notiz';
+            }
+            action = {
+                         name: "remove_notes",
+                         params: {
+                             remove_notes_borrowernotes: removeBorrowernotes,
+                             remove_notes_opacnote: removeOpacnote
+                         },
+                         description: description
+                     };
+        }
         else if ( isTabActive('action_add_list_tab') ) {
             if ( $("#late_payment_claim_action_patron_list_add").prop('checked') ) {
                 description = 'Hinzufügen zur Benutzerliste "' + $("#late_payment_claim_action_patron_list option:selected").text() + '"';
@@ -2574,6 +2637,11 @@
                 $("#late_payment_claim_action_patron_list_delete").prop('checked',item.params.patron_list_delete);
                 $("a[data-tabname='action_add_list_tab'").click();
                 break;
+            case "remove_notes":
+                $("#late_payment_claim_action_remove_notes_borrowernotes").prop('checked',item.params.remove_notes_borrowernotes);
+                $("#late_payment_claim_action_remove_notes_opacnote").prop('checked',item.params.remove_notes_opacnote);
+                $("a[data-tabname='action_remove_notes_tab'").click();
+                break;
         }
     }
      
@@ -2691,6 +2759,9 @@
         $('#late_payment_claim_action_patron_list')[0].selectedIndex = 0;
         $('#late_payment_claim_action_patron_list_add').prop('checked',true);
         $('#late_payment_claim_action_patron_list_delete').prop('checked',false);
+        
+        $('#late_payment_claim_action_remove_notes_borrowernotes').prop('checked',true);
+        $('#late_payment_claim_action_remove_notes_opacnote').prop('checked',true);
     }
     
     function getNextExecutionDays() {

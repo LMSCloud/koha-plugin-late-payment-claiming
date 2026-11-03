@@ -195,7 +195,14 @@ sub claimPatronsOfAllConfigurations {
                     $usernumber);
         my $claim_action_id = $dbh->{mysql_insertid};
         
-        $doBans->executeBanActions($patron_id,$claimPatron->{claim_id},$claimPatron->{level},$claimPatron->{ban_actions});
+        # The actions of a level are shared by all patrons of that level, so execute a copy
+        # to which the actions add what they did (e.g. the texts written into patron notes).
+        my $executedActions = clone( $claimPatron->{ban_actions} );
+        $doBans->executeBanActions($patron_id,$claimPatron->{claim_id},$claimPatron->{level},$executedActions);
+        $dbh->do("UPDATE lmsc_late_payment_claim_history SET ban_actions = ? WHERE id = ?",
+                    undef,
+                    $json->encode( $executedActions ),
+                    $claim_action_id);
         
         push @$IdList, $claim_action_id;
     }
@@ -719,9 +726,17 @@ sub closePaidLatePaymentClaim {
                         $json->encode( $unbanActions ),
                         $usernumber
                         );
+    my $history_id = $dbh->{mysql_insertid};
                         
     my $doActions = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::BanActions->new();
-    $doActions->executeBanActions($patron->borrowernumber,$claim->{id},$claim->{level},$unbanActions);
+    my $executedActions = clone( $unbanActions );
+    $doActions->executeBanActions($patron->borrowernumber,$claim->{id},$claim->{level},$executedActions);
+    
+    # store what the actions did (e.g. how many notes were removed) with the history entry
+    $dbh->do("UPDATE lmsc_late_payment_claim_history SET ban_actions = ? WHERE id = ?",
+                        undef,
+                        $json->encode( $executedActions ),
+                        $history_id);
 
 }
 

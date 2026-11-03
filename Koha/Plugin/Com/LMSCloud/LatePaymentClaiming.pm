@@ -40,7 +40,7 @@ use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfigu
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming;
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution;
 
-our $VERSION = "1.1.7";
+our $VERSION = "1.1.8";
 our $MINIMUM_VERSION = "22.11";
 
 our $metadata = {
@@ -343,7 +343,8 @@ sub after_account_action {
     if ( exists($args->{action}) && $args->{action} eq "add_credit" ) {
         if ( $line && $line->borrowernumber ) {
             my $dbh = C4::Context->dbh;
-            my $claim = $dbh->selectrow_hashref("SELECT * FROM lmsc_late_payment_claim WHERE borrowernumber = ?",undef,$line->borrowernumber);
+            # only a claim that is still open or paused can be closed, a closed one must not be closed again
+            my $claim = $dbh->selectrow_hashref("SELECT * FROM lmsc_late_payment_claim WHERE borrowernumber = ? AND state <> 'closed' ORDER BY id DESC LIMIT 1",undef,$line->borrowernumber);
             if ( $claim ) {
                 my $patron  = Koha::Patrons->find( $line->borrowernumber );
                 if ( $patron ) {

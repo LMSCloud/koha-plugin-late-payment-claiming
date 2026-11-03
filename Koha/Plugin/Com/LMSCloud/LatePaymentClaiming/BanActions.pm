@@ -39,6 +39,8 @@ use Koha::Patron::Debarments qw(DelDebarment AddDebarment);
 use C4::Koha qw( GetAuthorisedValues );
 use C4::Context;
 
+use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::NoteText;
+
 sub new {
     my ( $class ) = @_;
 
@@ -65,7 +67,7 @@ sub executeBanActions {
     my $level = shift;
     my $ban_actions = shift;
    
-    my $sortHelp = { 'letter' => 100, 'fee' => 50, 'delete_debarement' => 30, 'debarement' => 40, 'set_field' => 10, 'patron_list' => 20 };
+    my $sortHelp = { 'letter' => 100, 'fee' => 50, 'delete_debarement' => 30, 'debarement' => 40, 'set_field' => 10, 'patron_list' => 20, 'remove_notes' => 5 };
     
     $ban_actions = [ (sort { $sortHelp->{$a->{action}} <=> $sortHelp->{$b->{action}} } @$ban_actions) ];
     
@@ -88,7 +90,15 @@ sub executeBanActions {
     if ( $patron ) {
         for my $ban_action(@$ban_actions) {
             if ( $ban_action->{action} eq 'set_field' ) {
-                $self->setFieldValuesAction($patron,$ban_action->{parameter},$templateVars);
+                # remember what was written so that it can be removed again later
+                $ban_action->{applied} = $self->setFieldValuesAction($patron,$ban_action->{parameter},$templateVars);
+            }
+            elsif ( $ban_action->{action} eq 'remove_notes' ) {
+                my $result = $self->removeNotesAction($patron,$ban_action->{parameter},$templateVars,$claim_id);
+                if ( $result ) {
+                    $ban_action->{result} = $result;
+                    $ban_action->{description} = ( $ban_action->{description} // '' ) . ' [' . $result . ']';
+                }
             }
             elsif ( $ban_action->{action} eq 'patron_list' ) {
                 $self->patronListAction($patron,$ban_action->{parameter},$templateVars);
@@ -342,6 +352,8 @@ sub setFieldValuesAction {
     my $setvalues = {};
     my $attrValues = {};
     my $params = {};
+    my $renderedNotes = {};
+    my $applied = {};
     
     foreach my $param(@$parameters) {
         $params->{$param->{parameter_name}} = $param->{parameter_value};
@@ -360,6 +372,7 @@ sub setFieldValuesAction {
         elsif ( $param->{parameter_name} eq 'set_field_borrowernotes' && $param->{parameter_value} ) {
             my $note = $param->{parameter_value};
             $note = $self->formatAsTemplate($note,$templateVars);
+            $renderedNotes->{borrowernotes} = $note;
             $setvalues->{borrowernotes} = $note;
             if ( $params->{'set_field_borrowernotes_append'} && $params->{'set_field_borrowernotes_append'} == JSON::true ) {
                 my $currnote = $patron->borrowernotes;
@@ -373,6 +386,7 @@ sub setFieldValuesAction {
         elsif ( $param->{parameter_name} eq 'set_field_opacnote' && $param->{parameter_value} ) {
             my $note = $param->{parameter_value};
             $note = $self->formatAsTemplate($note,$templateVars);
+            $renderedNotes->{opacnote} = $note;
             $setvalues->{opacnote} = $note;
             if ( $params->{'set_field_opacnote_append'} && $params->{'set_field_opacnote_append'} == JSON::true ) {
                 my $currnote = $patron->opacnote;
@@ -436,6 +450,11 @@ sub setFieldValuesAction {
         if ( $@ ) { 
             carp "Error saving data changes of borrower " . $patron->borrowernumber .": $@. Field values: " . Dumper($setvalues);
         }
+        else {
+            foreach my $field ( keys %$renderedNotes ) {
+                $applied->{$field} = $renderedNotes->{$field} if ( defined($renderedNotes->{$field}) && length($renderedNotes->{$field}) > 0 );
+            }
+        }
     }
     if ( scalar(keys %$attrValues) ) {
         foreach my $attr(keys %$attrValues) {
@@ -451,7 +470,170 @@ sub setFieldValuesAction {
             }
         }
     }
+    
+    return $applied;
 };
+
+=head2 removeNotesAction
+
+Removes the texts that the late payment claims of a claim case have written
+into the circulation note and/or the OPAC note of the patron.
+
+The texts are taken from the 'applied' entries the claiming run stores with
+the 'claimed' history entries of the claim case. History entries that were
+written before these entries existed are rebuilt from the action's template.
+A text that cannot be found in the note any more (e.g. because the note was
+edited by staff) is left alone.
+
+Returns a short description of the result for the claim history.
+
+=cut
+
+sub removeNotesAction {
+    my $self = shift;
+    my $patron = shift;
+    my $parameters = shift;
+    my $templateVars = shift;
+    my $claim_id = shift;
+    
+    my $params = {};
+    foreach my $param(@$parameters) {
+        $params->{$param->{parameter_name}} = $param->{parameter_value};
+    }
+    
+    my $fields = [];
+    my $labels = { borrowernotes => 'Ausleihnotiz', opacnote => 'OPAC-Notiz' };
+    foreach my $field ( 'borrowernotes', 'opacnote' ) {
+        my $name = 'remove_notes_' . $field;
+        push @$fields, $field if ( $params->{$name} && $params->{$name} == JSON::true );
+    }
+    return '' if ( !scalar(@$fields) || !$claim_id );
+    
+    my $dbh = C4::Context->dbh;
+    my $json = JSON->new->allow_nonref;
+    
+    # claimed history entries of the claim case, newest first
+    my $history = $dbh->selectall_arrayref(
+                    q{SELECT id, level, timestamp, ban_actions 
+                      FROM   lmsc_late_payment_claim_history 
+                      WHERE  claim_id = ? AND action = 'claimed' 
+                      ORDER  BY timestamp DESC, id DESC}, 
+                    { Slice => {} }, $claim_id);
+    
+    my $claim = $dbh->selectrow_hashref("SELECT * FROM lmsc_late_payment_claim WHERE id = ?",undef,$claim_id);
+    
+    my $notes = {};
+    my $total = {};
+    my $removed = {};
+    foreach my $field (@$fields) {
+        $notes->{$field} = $patron->$field;
+        $total->{$field} = 0;
+        $removed->{$field} = 0;
+    }
+    
+    foreach my $entry (@$history) {
+        my $actions = eval { $json->decode( $entry->{ban_actions} ) };
+        next if ( !$actions || ref($actions) ne 'ARRAY' );
+        
+        # the actions were executed in the given order, so undo them in reverse order
+        foreach my $action ( reverse @$actions ) {
+            next if ( ref($action) ne 'HASH' || ($action->{action} // '') ne 'set_field' );
+            
+            foreach my $field (@$fields) {
+                my @candidates;
+                if ( ref($action->{applied}) eq 'HASH' ) {
+                    # new style: the text that was really written is known
+                    @candidates = ( $action->{applied}->{$field} ) if ( defined($action->{applied}->{$field}) && length($action->{applied}->{$field}) > 0 );
+                }
+                else {
+                    # old style: render the configured text again
+                    @candidates = $self->renderHistoricNotes($patron,$action,$field,$entry,$claim,$templateVars);
+                }
+                next if ( !scalar(@candidates) );
+                
+                $total->{$field}++;
+                foreach my $text (@candidates) {
+                    my ( $newnote, $found ) = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::NoteText::remove( $notes->{$field}, $text );
+                    if ( $found ) {
+                        $notes->{$field} = $newnote;
+                        $removed->{$field}++;
+                        last;
+                    }
+                }
+            }
+        }
+    }
+    
+    my $setvalues = {};
+    foreach my $field (@$fields) {
+        my $current = $patron->$field;
+        if ( ( $current // '' ) ne ( $notes->{$field} // '' ) ) {
+            $setvalues->{$field} = ( defined($notes->{$field}) && length($notes->{$field}) > 0 ) ? $notes->{$field} : undef;
+        }
+    }
+    if ( scalar(keys %$setvalues) ) {
+        eval { $patron->set($setvalues)->store; };
+        if ( $@ ) {
+            carp "Error removing notes of borrower " . $patron->borrowernumber .": $@. Field values: " . Dumper($setvalues);
+            return 'Fehler beim Speichern der Notizen';
+        }
+    }
+    
+    my @result;
+    foreach my $field (@$fields) {
+        if ( $total->{$field} == 0 ) {
+            push @result, $labels->{$field} . ': keine gesetzten Hinweise gefunden';
+        }
+        else {
+            my $text = $labels->{$field} . ': ' . $removed->{$field} . ' von ' . $total->{$field} . ' Hinweisen entfernt';
+            my $missing = $total->{$field} - $removed->{$field};
+            $text .= ', ' . $missing . ' nicht mehr in der Notiz gefunden' if ( $missing > 0 );
+            push @result, $text;
+        }
+    }
+    return join('; ', @result);
+}
+
+=head2 renderHistoricNotes
+
+Rebuilds the text that an action of an older history entry wrote into a note.
+The date of the claiming run is taken from the history entry. The run used
+the UTC date, so the day before is tried as well.
+
+=cut
+
+sub renderHistoricNotes {
+    my $self = shift;
+    my $patron = shift;
+    my $action = shift;
+    my $field = shift;
+    my $entry = shift;
+    my $claim = shift;
+    my $templateVars = shift;
+    
+    my $template;
+    foreach my $param ( @{$action->{parameter}} ) {
+        if ( $param->{parameter_name} eq 'set_field_' . $field && defined($param->{parameter_value}) && length($param->{parameter_value}) > 0 ) {
+            $template = $param->{parameter_value};
+        }
+    }
+    return () if ( !defined($template) );
+    
+    my $timestamp = eval { dt_from_string( $entry->{timestamp}, 'iso' ) };
+    return () if ( !$timestamp );
+    
+    my @texts;
+    foreach my $date ( $timestamp, $timestamp->clone()->subtract( days => 1 ) ) {
+        my $vars = {
+                       %$templateVars,
+                       claim => { %{ $claim || {} }, level => $entry->{level} },
+                       today => output_pref( { dt => $date, dateonly => 1 } )
+                   };
+        my $text = $self->formatAsTemplate($template,$vars);
+        push @texts, $text if ( defined($text) && length($text) > 0 );
+    }
+    return @texts;
+}
 
 sub getAttributes {
     
