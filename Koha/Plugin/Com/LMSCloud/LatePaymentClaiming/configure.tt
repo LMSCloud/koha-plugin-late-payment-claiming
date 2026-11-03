@@ -215,9 +215,11 @@
                 </form>
 
                 <form>
-                    <fieldset class="rows">
+                    <fieldset class="rows" id="latepayment_configurations_fieldset">
 
                         <legend>Mahnkonfigurationen</legend>
+                        
+                        <div class="alert alert-success copy_config_success" style="display:none"></div>
                         
                         <table class="latepayment_configurations">
                             <thead>
@@ -256,6 +258,9 @@
                                     </td>
                                     <td class="latepayment_config_list_actions">
                                         <a href="/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=configure&do=edit&library_id=[% configuration.library_id | uri %]&category_id=[% configuration.category_id | uri %]" class="btn btn-default btn-xs"><i class="fa fa-pencil"></i> Bearbeiten</a>
+                                        [% IF configurations.size > 1 %]
+                                        <a href="javascript:void(0)" class="copy_config_from_row btn btn-default btn-xs" data-library-id="[% configuration.library_id | html %]" data-category-id="[% configuration.category_id | html %]"><i class="fa fa-copy" aria-hidden="true"></i> Kopieren von &hellip;</a>
+                                        [% END %]
                                         <a href="javascript:deleteLatePaymentClaimConfig('[% configuration.library_id | html %]','[% configuration.category_id | html %]')" class="btn btn-default btn-xs delete"><i class="fa fa-trash"></i> Löschen</a>
                                     </td>
                                 </tr>
@@ -282,6 +287,9 @@
                                     </td>
                                     <td class="latepayment_config_list_actions">
                                         <a href="javascript:latepayment_config_action_new()" class="editrule btn btn-default btn-xs"><i class="fa fa-plus"></i> Hinzufügen</a>
+                                        [% IF configurations.size > 0 %]
+                                        <a href="javascript:openCopyConfigModal()" class="copy_config_from btn btn-default btn-xs"><i class="fa fa-copy" aria-hidden="true"></i> Kopieren von &hellip;</a>
+                                        [% END %]
                                     </td>
                                 </tr>
                             </tbody>
@@ -339,6 +347,9 @@
                         
                         <div class="add_latepayment_claimlevel">
                             <a class="btn btn-default btn-xs" onclick="addLatePaymentClaimLevelConfig()"><i class="fa fa-plus" aria-hidden="true"></i> Mahnstufe hinzufügen</a>
+                            [% IF configurations.size > 0 %]
+                            <a class="btn btn-default btn-xs copy_config_from" id="copy_config_from_edit" onclick="openCopyConfigModal()"><i class="fa fa-copy" aria-hidden="true"></i> Kopieren von &hellip;</a>
+                            [% END %]
                             <a class="btn btn-default btn-xs submit" onclick="saveLatePaymentClaimLevelConfig()"><i class="fa fa-floppy-o fa-floppy-disk" aria-hidden="true"></i> Konfiguration speichern</a>
                         </div>
 
@@ -348,6 +359,7 @@
                         <div class="alert alert-danger show-late-payment-claim-config-save-error" style="display:none; margin-top:15px">
                             Beim Speichern der Konfiguration trat ein Fehler auf.
                         </div>
+                        <div class="alert alert-info show-late-payment-claim-config-copy-info" style="display:none; margin-top:15px"></div>
                         <div id="latepayment_claim_config">
 
                         </div>
@@ -701,6 +713,63 @@
     </div> <!-- /.modal-dialog -->
 </div> <!-- /.modal -->
 
+
+<!-- Copy a configuration -->
+<div class="modal" id="copy_config_modal" tabindex="-1" role="dialog" aria-labelledby="copy_config_modal_title">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="closebtn" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="copy_config_modal_title">Mahnkonfiguration als Vorlage wählen</h4>
+            </div>
+            <div class="modal-body">
+                [% IF action == "edit_config" %]
+                <span id="copy_config_current" style="display:none"
+                      data-library-name="[% IF (library_id == '*' || !library_id) %]Alle[% ELSE %][% Branches.GetName(library_id) | html %][% END %]"
+                      data-category-name="[% IF (category_id == '*' || !category_id) %]Alle[% ELSE %][% Categories.GetName(category_id) | html %][% END %]"></span>
+                [% END %]
+                <div class="copy_config_target">
+                    <small>Ziel der Kopie</small>
+                    <strong class="copy_config_target_name"></strong>
+                </div>
+                <div class="alert alert-warning copy_config_warn" style="display:none"></div>
+                <p>Bitte anklicken, um eine Einstellung zu übernehmen.</p>
+                <input type="text" class="copy_config_search" style="width:100%" placeholder="Zweigstelle oder Benutzergruppe suchen" autocomplete="off" />
+                <div class="copy_config_list">
+                    <table class="copy_config_table">
+                        <thead>
+                            <tr>
+                                <th style="width:55%">Zweigstelle</th>
+                                <th>Benutzergruppe</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            [% FOREACH configuration IN configurations %]
+                            <tr class="copy_config_row" data-library-id="[% configuration.library_id | html %]" data-category-id="[% configuration.category_id | html %]">
+                                <td class="copy_config_branch">[% IF (configuration.library_id == '*' || !configuration.library_id) %]Alle[% ELSE %][% Branches.GetName(configuration.library_id) | html %][% END %]</td>
+                                <td class="copy_config_category">[% IF (configuration.category_id == '*' || !configuration.category_id) %]Alle[% ELSE %][% Categories.GetName(configuration.category_id) | html %][% END %]</td>
+                            </tr>
+                            [% END %]
+                            <tr class="copy_config_none" style="display:none"><td colspan="2">Keine Konfiguration gefunden.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="copy_config_count"></div>
+                <div class="alert alert-warning copy_config_confirm" style="display:none">
+                    <div class="copy_config_confirm_text"></div>
+                    <div style="margin-top:0.6em">
+                        <a class="btn btn-primary btn-xs copy_config_confirm_ok">Ersetzen</a>
+                        <a class="btn btn-default btn-xs copy_config_confirm_cancel">Abbrechen</a>
+                    </div>
+                </div>
+                <div class="alert alert-danger copy_config_error" style="display:none">Beim Kopieren der Konfiguration trat ein Fehler auf.</div>
+            </div> <!-- /.modal-body -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default deny" data-dismiss="modal" data-bs-dismiss="modal">Abbrechen</button>
+            </div> <!-- /.modal-footer -->
+        </div> <!-- /.modal-content -->
+    </div> <!-- /.modal-dialog -->
+</div> <!-- /.modal -->
 
 [% IF action == "edit_config" %]
 
@@ -1181,6 +1250,245 @@
         $('#hidden_unban_actions').val(JSON.stringify(writeBanActions(unban_actions)));
     }
     
+    /*
+     * Copy an existing configuration ("Kopieren von ...").
+     * - overview page: the copy is saved immediately for the library/category
+     *   selected in the "add" row and opened for editing afterwards.
+     * - edit page: the copy replaces the configuration currently edited in the
+     *   browser; it is not saved until "Konfiguration speichern" is clicked.
+     */
+    var copyConfigMode = '[% IF action == "edit_config" %]edit[% ELSE %]list[% END %]';
+    var copyConfigPending = null;
+    var copyConfigListTarget = null;
+    
+    function normalizeConfigId(value) {
+        return ( value === undefined || value === null || value === '' ) ? '*' : value;
+    }
+    
+    function getCopyConfigTarget() {
+        if ( copyConfigMode == 'edit' ) {
+            var $current = $('#copy_config_current');
+            return {
+                library_id: normalizeConfigId(lateClaimConfig.library_id),
+                category_id: normalizeConfigId(lateClaimConfig.category_id),
+                library_name: $current.attr('data-library-name'),
+                category_name: $current.attr('data-category-name')
+            };
+        }
+        if ( copyConfigListTarget ) {
+            return copyConfigListTarget;
+        }
+        var $library = $('#latepayment_config_branchcode');
+        var $category = $('#latepayment_config_categorycode');
+        return {
+            library_id: $library.val(),
+            category_id: $category.val(),
+            library_name: $library.find('option:selected').text(),
+            category_name: $category.find('option:selected').text()
+        };
+    }
+    
+    function getCopyConfigRowSource($row) {
+        return {
+            library_id: normalizeConfigId($row.attr('data-library-id')),
+            category_id: normalizeConfigId($row.attr('data-category-id')),
+            library_name: $row.find('.copy_config_branch').text().trim(),
+            category_name: $row.find('.copy_config_category').text().trim()
+        };
+    }
+    
+    function isCopyConfigTarget($row, target) {
+        var source = getCopyConfigRowSource($row);
+        return source.library_id === target.library_id && source.category_id === target.category_id;
+    }
+    
+    function currentConfigHasContent() {
+        return lateClaimConfig.level_configuration.some(function(levelConfig) {
+            return parseInt(levelConfig.level) > 0
+                || ( levelConfig.patron_selections && levelConfig.patron_selections.length > 0 )
+                || ( levelConfig.ban_actions && levelConfig.ban_actions.length > 0 );
+        });
+    }
+    
+    function copyConfigNeedsConfirmation(target) {
+        if ( copyConfigMode == 'edit' ) {
+            return currentConfigHasContent();
+        }
+        var exists = false;
+        $('#copy_config_modal tr.copy_config_row').each(function() {
+            if ( isCopyConfigTarget($(this), target) ) exists = true;
+        });
+        return exists;
+    }
+    
+    function filterCopyConfigList() {
+        var query = $.trim($('#copy_config_modal .copy_config_search').val()).toLowerCase();
+        var total = 0, visible = 0, lastBranch = null;
+        $('#copy_config_modal tr.copy_config_row').each(function() {
+            var $row = $(this);
+            total++;
+            var match = query === '' || $row.text().toLowerCase().indexOf(query) >= 0;
+            $row.toggle(match);
+            if ( match ) {
+                visible++;
+                var branch = $row.find('.copy_config_branch').text().trim();
+                $row.toggleClass('copy_config_repeat', branch === lastBranch);
+                lastBranch = branch;
+            }
+        });
+        $('#copy_config_modal tr.copy_config_none').toggle(visible == 0);
+        $('#copy_config_modal .copy_config_count').text(visible + ' von ' + total + ' Konfigurationen');
+    }
+    
+    /*
+     * On the overview page the target is either the library/category selected
+     * in the "add" row (no argument) or an already existing configuration whose
+     * row button was clicked (its table row is passed as argument).
+     */
+    function openCopyConfigModal($targetRow) {
+        copyConfigListTarget = null;
+        if ( $targetRow && copyConfigMode == 'list' ) {
+            copyConfigListTarget = {
+                library_id: normalizeConfigId($targetRow.attr('data-library-id')),
+                category_id: normalizeConfigId($targetRow.attr('data-category-id')),
+                library_name: $targetRow.closest('tr').find('.latepayment_config_list_branch').text().trim(),
+                category_name: $targetRow.closest('tr').find('.latepayment_config_list_category').text().trim()
+            };
+        }
+        var target = getCopyConfigTarget();
+        var $modal = $('#copy_config_modal');
+        copyConfigPending = null;
+        $modal.find('.copy_config_target_name').text(target.library_name + ' / ' + target.category_name);
+        $modal.find('.copy_config_search').val('');
+        $modal.find('.copy_config_confirm, .copy_config_error, .copy_config_warn').hide();
+        $modal.find('tr.copy_config_row').each(function() {
+            var same = isCopyConfigTarget($(this), target);
+            $(this).toggleClass('copy_config_disabled', same);
+            $(this).attr('title', same ? 'Das ist die Zielkonfiguration selbst' : '');
+        });
+        if ( copyConfigNeedsConfirmation(target) ) {
+            $modal.find('.copy_config_warn').text( copyConfigMode == 'edit'
+                ? 'Die aktuelle Konfiguration enthält bereits Mahnstufen. Sie werden durch die Vorlage ersetzt, sobald Sie eine Konfiguration auswählen.'
+                : 'Für dieses Ziel gibt es bereits eine Konfiguration. Sie wird beim Kopieren ersetzt.').show();
+        }
+        filterCopyConfigList();
+        $modal.modal('show');
+    }
+    
+    function showCopyConfigError() {
+        $('#copy_config_modal .copy_config_confirm').hide();
+        $('#copy_config_modal .copy_config_error').show();
+    }
+    
+    function selectCopyConfigSource(source) {
+        var target = getCopyConfigTarget();
+        var $modal = $('#copy_config_modal');
+        $modal.find('.copy_config_error').hide();
+        if ( copyConfigNeedsConfirmation(target) ) {
+            copyConfigPending = { source: source, target: target, replace: true };
+            $modal.find('.copy_config_confirm_text').text( copyConfigMode == 'edit'
+                ? 'Die aktuelle Konfiguration wird durch die Vorlage "' + source.library_name + ' / ' + source.category_name + '" ersetzt. Die Änderung wird erst mit "Konfiguration speichern" gespeichert.'
+                : 'Die vorhandene Konfiguration "' + target.library_name + ' / ' + target.category_name + '" wird durch die Vorlage "' + source.library_name + ' / ' + source.category_name + '" ersetzt und sofort gespeichert.');
+            $modal.find('.copy_config_confirm').show();
+        }
+        else {
+            copyLatePaymentClaimConfig(source, target, false);
+        }
+    }
+    
+    function copyLatePaymentClaimConfig(source, target, replace) {
+        $('#copy_config_modal .copy_config_error, #copy_config_modal .copy_config_confirm').hide();
+        $.ajax({
+            url: '/api/v1/contrib/latepaymentclaiming/configuration/' + encodeURI(source.library_id) + '/' + encodeURI(source.category_id),
+            accepts: { text: "application/json" },
+            dataType: 'json'
+        })
+        .done(function(result) {
+            result.library_id = target.library_id;
+            result.category_id = target.category_id;
+            if ( copyConfigMode == 'edit' ) {
+                applyLatePaymentClaimConfig(result);
+                $('#copy_config_modal').modal('hide');
+                $('.show-late-payment-claim-config-copy-info').text('Die Konfiguration "' + source.library_name + ' / ' + source.category_name + '" wurde übernommen. Sie ist noch nicht gespeichert.').css('display','block');
+            }
+            else {
+                saveCopiedLatePaymentClaimConfig(result, source, target, replace);
+            }
+        })
+        .fail(showCopyConfigError);
+    }
+    
+    function saveCopiedLatePaymentClaimConfig(config, source, target, replace) {
+        var targetUrl = '/api/v1/contrib/latepaymentclaiming/configuration/' + encodeURI(target.library_id) + '/' + encodeURI(target.category_id);
+        var save = function() {
+            $.ajax({
+                url: targetUrl,
+                method: 'POST',
+                data: JSON.stringify(config),
+                contentType: 'application/json'
+            })
+            .done(function() {
+                try {
+                    sessionStorage.setItem('latepaymentclaiming_copy_config_done',
+                        'Die Konfiguration "' + source.library_name + ' / ' + source.category_name + '" wurde nach "' + target.library_name + ' / ' + target.category_name + '" ' + ( replace ? 'kopiert und die vorhandene Konfiguration ersetzt.' : 'kopiert.' ));
+                } catch (e) {}
+                document.location = '/cgi-bin/koha/plugins/run.pl?class=[% CLASS | uri %]&method=configure';
+            })
+            .fail(showCopyConfigError);
+        };
+        if ( replace ) {
+            // saving only updates the existing levels, so remove the old ones first
+            $.ajax({ url: targetUrl, method: 'DELETE', accepts: { text: "application/json" } })
+            .done(save)
+            .fail(showCopyConfigError);
+        }
+        else {
+            save();
+        }
+    }
+    
+    $(document).ready(function() {
+        var $modal = $('#copy_config_modal');
+        $('.copy_config_from_row').on('click', function() {
+            openCopyConfigModal($(this));
+        });
+        try {
+            var copyDone = sessionStorage.getItem('latepaymentclaiming_copy_config_done');
+            if ( copyDone ) {
+                sessionStorage.removeItem('latepaymentclaiming_copy_config_done');
+                $('.copy_config_success').text(copyDone).show();
+                // the list is below the general settings: bring it into view
+                $('#latepayment_configurations_fieldset').get(0).scrollIntoView();
+            }
+        } catch (e) {}
+        $modal.on('click', 'tr.copy_config_row', function() {
+            if ( $(this).hasClass('copy_config_disabled') ) return;
+            selectCopyConfigSource(getCopyConfigRowSource($(this)));
+        });
+        $modal.on('input keyup', '.copy_config_search', filterCopyConfigList);
+        $modal.on('click', '.copy_config_confirm_ok', function() {
+            if ( copyConfigPending ) {
+                copyLatePaymentClaimConfig(copyConfigPending.source, copyConfigPending.target, copyConfigPending.replace);
+            }
+        });
+        $modal.on('click', '.copy_config_confirm_cancel', function() {
+            copyConfigPending = null;
+            $modal.find('.copy_config_confirm').hide();
+        });
+        $modal.on('shown.bs.modal', function() {
+            $modal.find('.copy_config_search').trigger('focus');
+        });
+        if ( copyConfigMode == 'edit' ) {
+            // offer copying only if there is another configuration to copy from
+            var target = getCopyConfigTarget();
+            var selectable = 0;
+            $modal.find('tr.copy_config_row').each(function() {
+                if ( !isCopyConfigTarget($(this), target) ) selectable++;
+            });
+            if ( selectable == 0 ) $('#copy_config_from_edit').hide();
+        }
+    });
+    
     function latepayment_config_action_new() {
         var branchcode = $("#latepayment_config_branchcode").val();
         var categorycode = $("#latepayment_config_categorycode").val();
@@ -1196,21 +1504,26 @@
         };
         $.ajax(options)
         .then(function(result) {
-            lateClaimConfig = result;
-            if ( lateClaimConfig.level_configuration.length == 0 ) {
-                lateClaimConfig.level_configuration.push({
-                                      level: 0,
-                                      outstanding_fee_limit: 0,
-                                      patron_selections: [],
-                                      ban_actions: []
-                                  });
-            }
-            for (let i = 0; i < lateClaimConfig.level_configuration.length; i++) {
-                lateClaimConfig.level_configuration[i].ban_actions = readBanActions(lateClaimConfig.level_configuration[i].ban_actions);
-                if ( parseInt(lateClaimConfig.level_configuration[i].level) > 0 )
-                    addLatePaymentClaimLevel(lateClaimConfig.level_configuration[i]);
-            }
+            applyLatePaymentClaimConfig(result);
         });
+    }
+    
+    function applyLatePaymentClaimConfig(result) {
+        lateClaimConfig = result;
+        if ( lateClaimConfig.level_configuration.length == 0 ) {
+            lateClaimConfig.level_configuration.push({
+                                  level: 0,
+                                  outstanding_fee_limit: 0,
+                                  patron_selections: [],
+                                  ban_actions: []
+                              });
+        }
+        $('#latepayment_claim_config').empty();
+        for (let i = 0; i < lateClaimConfig.level_configuration.length; i++) {
+            lateClaimConfig.level_configuration[i].ban_actions = readBanActions(lateClaimConfig.level_configuration[i].ban_actions);
+            if ( parseInt(lateClaimConfig.level_configuration[i].level) > 0 )
+                addLatePaymentClaimLevel(lateClaimConfig.level_configuration[i]);
+        }
     }
     
     function loadUnbanActions() {
@@ -1270,6 +1583,7 @@
             data: JSON.stringify(writeLateClaimConfig),
             contentType: 'application/json',
             success: function(){
+                $('.show-late-payment-claim-config-copy-info').css('display','none');
                 $('.show-late-payment-claim-config-save-success').css('display','block');
                 setTimeout(function() {
                     $('.show-late-payment-claim-config-save-success').css('display','none');

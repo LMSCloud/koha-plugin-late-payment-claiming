@@ -337,6 +337,7 @@ table#latePaymentClaimHistory tr:nth-child(2) th:nth-child(10) {
 }
 
 #patron_selection .modal-dialog,
+#copy_config_modal .modal-dialog,
 #add_late_payment_claim .modal-dialog,
 #change_late_payment_claim .modal-dialog,
 #next_execution_days_modal .modal-dialog,
@@ -364,7 +365,8 @@ table#latePaymentClaimHistory tr:nth-child(2) th:nth-child(10) {
 #action_selection .modal-header,
 #next_execution_days_modal .modal-header,
 #selection_patron_list .modal-header,
-#patron_selection .modal-header {
+#patron_selection .modal-header,
+#copy_config_modal .modal-header {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
@@ -398,7 +400,9 @@ table#latePaymentClaimHistory tr:nth-child(2) th:nth-child(10) {
 #selection_patron_list .modal-header::before,
 #selection_patron_list .modal-header::after,
 #patron_selection .modal-header::before,
-#patron_selection .modal-header::after {
+#patron_selection .modal-header::after,
+#copy_config_modal .modal-header::before,
+#copy_config_modal .modal-header::after {
     display: none !important;
     content: none !important;
 }
@@ -411,7 +415,8 @@ table#latePaymentClaimHistory tr:nth-child(2) th:nth-child(10) {
 #action_selection .modal-header .modal-title,
 #next_execution_days_modal .modal-header .modal-title,
 #selection_patron_list .modal-header .modal-title,
-#patron_selection .modal-header .modal-title {
+#patron_selection .modal-header .modal-title,
+#copy_config_modal .modal-header .modal-title {
     order: 1 !important;
     flex-grow: 0 !important;
     text-align: left !important;
@@ -426,7 +431,8 @@ table#latePaymentClaimHistory tr:nth-child(2) th:nth-child(10) {
 #action_selection .modal-header .closebtn,
 #next_execution_days_modal .modal-header .closebtn,
 #selection_patron_list .modal-header .closebtn,
-#patron_selection .modal-header .closebtn {
+#patron_selection .modal-header .closebtn,
+#copy_config_modal .modal-header .closebtn {
     order: 2;
     background: transparent;
     border: 0;
@@ -448,6 +454,84 @@ table#latePaymentClaimHistory tr:nth-child(2) th:nth-child(10) {
 #action_selection .modal-header .closebtn:hover,
 #next_execution_days_modal .modal-header .closebtn:hover,
 #selection_patron_list .modal-header .closebtn:hover,
-#patron_selection .modal-header .closebtn:hover {
+#patron_selection .modal-header .closebtn:hover,
+#copy_config_modal .modal-header .closebtn:hover {
     opacity: 0.75;
+}
+
+/*
+ * "Kopieren von ..." dialog: scrollable two column list of the existing
+ * configurations, picked with a single click.
+ */
+#copy_config_modal .copy_config_target {
+    background: #f4f4f4;
+    border-radius: 4px;
+    margin-bottom: 0.8em;
+    padding: 0.5em 0.8em;
+}
+
+#copy_config_modal .copy_config_target small {
+    color: #666;
+    display: block;
+}
+
+#copy_config_modal .copy_config_list {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-top: 0.5em;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+#copy_config_modal table.copy_config_table {
+    margin: 0;
+    width: 100%;
+}
+
+#copy_config_modal table.copy_config_table th {
+    background: #f4f4f4;
+    position: sticky;
+    top: 0;
+    text-align: left;
+}
+
+#copy_config_modal table.copy_config_table td,
+#copy_config_modal table.copy_config_table th {
+    padding: 0.4em 0.7em;
+}
+
+#copy_config_modal table.copy_config_table tbody tr {
+    cursor: pointer;
+}
+
+#copy_config_modal table.copy_config_table tbody tr:hover {
+    background: #e6f1fb;
+}
+
+#copy_config_modal table.copy_config_table tbody tr.copy_config_disabled {
+    color: #999;
+    cursor: not-allowed;
+}
+
+#copy_config_modal table.copy_config_table tbody tr.copy_config_disabled:hover {
+    background: transparent;
+}
+
+#copy_config_modal table.copy_config_table tbody tr.copy_config_repeat td.copy_config_branch {
+    color: transparent;
+}
+
+#copy_config_modal .copy_config_count {
+    color: #666;
+    font-size: 90%;
+    margin-top: 0.4em;
+}
+
+#copy_config_modal .copy_config_confirm,
+#copy_config_modal .copy_config_error {
+    margin-top: 0.8em;
+}
+
+#latepayment_configurations_fieldset {
+    scroll-margin-top: 80px;
 }
