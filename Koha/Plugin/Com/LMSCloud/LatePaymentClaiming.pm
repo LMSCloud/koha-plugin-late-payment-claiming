@@ -62,8 +62,6 @@ sub new {
 
     my $self = $class->SUPER::new($args);
 
-    $self->{cgi} = CGI->new();
-
     return $self;
 }
 
