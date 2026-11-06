@@ -47,7 +47,7 @@ our $metadata = {
     name            => 'Gebührenmahnung',
     author          => 'LMSCloud GmbH',
     date_authored   => '2026-02-15',
-    date_updated    => "2026-11-05",
+    date_updated    => "2026-11-06",
     minimum_version => $MINIMUM_VERSION,
     maximum_version => undef,
     version         => $VERSION,
@@ -223,7 +223,9 @@ sub cronjob_nightly {
     my $cron = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution->new();
     
     my $today = dt_from_string();    # Koha time zone, same as the stored last_run
-    my $startdate = $today->clone()->subtract(days => 1);
+    # Without a last run (never run, or reset in the settings) the last opening day
+    # of the calendar is used, see getDefaultStartDate
+    my $startdate = $cron->getDefaultStartDate($execOnClosingDays,$execOnClosingDayLibrary);
     my $lastrun = $self->retrieve_data('last_run');
     if ( $lastrun ) {
         $startdate = dt_from_string($lastrun);

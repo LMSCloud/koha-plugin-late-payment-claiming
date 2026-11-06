@@ -50,6 +50,40 @@ sub new {
     return $self;
 }
 
+=head2 getDefaultStartDate
+
+Returns the date to start the calculation of the next execution day from if the
+plugin has no date of a last run (never run, or reset in the settings).
+
+Normally this is yesterday. If a scheduled day that falls on a closing day is moved
+to the next opening day ('delay'), it has to be the last opening day before today:
+only the next scheduled day after the start date is considered, so starting at
+yesterday would skip a scheduled day that was moved to today.
+
+=cut
+
+sub getDefaultStartDate {
+    my ($self,$execOnClosingDays,$execOnClosingDayLibrary) = @_;
+    
+    my $today = dt_from_string();
+    my $day = DateTime->new(year => $today->year, month => $today->month, day => $today->day);
+    my $startDate = $day->clone()->subtract(days => 1);
+    
+    if ( $execOnClosingDays && $execOnClosingDays eq 'delay' && $execOnClosingDayLibrary ) {
+        my $calendar = $CALENDAR_CLASS->new( branchcode => $execOnClosingDayLibrary );
+        my $maxCycles = 366;
+        while ( $maxCycles-- > 0 ) {
+            $day->subtract(days => 1);
+            if ( !$calendar->is_holiday($day) ) {
+                $startDate = $day->clone();
+                last;
+            }
+        }
+    }
+    
+    return $startDate;
+}
+
 sub getNextDays {
     my ($self,$dayCron,$monthCron,$weekdayCron,$start,$execOnClosingDays,$execOnClosingDayLibrary,$count) = @_;
     

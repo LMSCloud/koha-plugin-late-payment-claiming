@@ -268,12 +268,15 @@ sub getNextExecutionDays {
     my $day = $param->{'day'};
     my $month = $param->{'month'};
     my $weekday = $param->{'weekday'};
-    my $startDate =  eval { dt_from_string( $param->{'startDate'} ); };
+    my $startDate = $param->{'startDate'} ? eval { dt_from_string( $param->{'startDate'} ); } : undef;
     my $execOnClosingDays = $param->{'execOnClosingDays'};
     my $execOnClosingDayLibrary = $param->{'execOnClosingDayLibrary'};
     my $count = (($param->{'count'} || 0) + 0) || 20;
     
     my $executionChecker = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution->new();
+    
+    # without a last run use the same start date as the nightly job
+    $startDate ||= $executionChecker->getDefaultStartDate($execOnClosingDays,$execOnClosingDayLibrary);
     
     my $nextExecutionDays = $executionChecker->getNextDays($day,$month,$weekday,$startDate,$execOnClosingDays,$execOnClosingDayLibrary,$count);
     my $dates = [];
