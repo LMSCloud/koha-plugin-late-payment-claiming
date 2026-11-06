@@ -28,7 +28,7 @@ use C4::Context;
 use C4::Koha qw( GetAuthorisedValues );
 use C4::Auth qw( get_template_and_user haspermission );
 
-use Koha::Acquisition::Currencies qw( get_active );
+use Koha::Acquisition::Currencies;
 use Koha::DateUtils qw( dt_from_string output_pref );
 use Koha::Patrons;
 use Koha::Account::DebitTypes;
@@ -40,7 +40,7 @@ use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfigu
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming;
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution;
 
-our $VERSION = "1.1.9";
+our $VERSION = "1.1.10";
 our $MINIMUM_VERSION = "22.11";
 
 our $metadata = {
@@ -225,7 +225,7 @@ sub cronjob_nightly {
     my $today = dt_from_string();    # Koha time zone, same as the stored last_run
     # Without a last run (never run, or reset in the settings) the last opening day
     # of the calendar is used, see getDefaultStartDate
-    my $startdate = $cron->getDefaultStartDate($execOnClosingDays,$execOnClosingDayLibrary);
+    my $startdate = $cron->getDefaultStartDate($execution_on_closing_days,$execution_on_closing_days_library);
     my $lastrun = $self->retrieve_data('last_run');
     if ( $lastrun ) {
         $startdate = dt_from_string($lastrun);
