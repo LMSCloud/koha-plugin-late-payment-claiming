@@ -156,7 +156,8 @@
                             </li>
                         </ol>
                         [% IF unbanActions.size > 0 %]
-                        <div id="change_late_payment_claim_unban" style="display:none; margin-top:1em">
+                        <div id="change_late_payment_claim_unban" style="display:none">
+                            <div class="change_late_payment_claim_unban_title">Abschlussaktionen</div>
                             <label for="change_late_payment_claim_run_unban_actions">
                                 <input type="checkbox" id="change_late_payment_claim_run_unban_actions" value="1" checked>
                                 Aktionen bei Abschluss des Mahnfalls durchführen

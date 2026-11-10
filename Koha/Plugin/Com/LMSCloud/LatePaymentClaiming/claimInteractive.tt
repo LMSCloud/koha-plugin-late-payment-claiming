@@ -71,7 +71,7 @@
                         Wählen Sie die Gebührenmahnungen aus, die durchgeführt werden sollen.
                     </p>
                     <p>
-                        Es können maximal <strong>[% countClaimsLimit | html %]</strong> Gebührenmahnungen interaktiv durchgeführt werden.
+                        Es können maximal <strong>[% countClaimsLimit | html %]</strong> Gebührenmahnungen gleichzeitig interaktiv durchgeführt werden.
                         [% IF patronsToClaim.size > countClaimsLimit %]
                         <br/>
                         Es stehen <strong>[% patronsToClaim.size | html %]</strong> Gebührenmahnungen an. Die übrigen bleiben anstehend. Sie können nach dem Durchführen erneut interaktiv durchgeführt oder im Tageslauf gemahnt werden.
@@ -86,11 +86,17 @@
                         <input type="hidden" name="toolaction" value="claimInteractive"/>
                         <input type="hidden" name="patron_ids" id="claim_patron_ids" value=""/>
                         
-                        <input type="submit" id="start_claiming_button" value="Ausgewählte Gebührenmahnungen durchführen"/>
-                        <a class="btn btn-default btn-xs" id="claim_select_all" href="javascript:void(0)">Alle auswählen</a>
-                        <a class="btn btn-default btn-xs" id="claim_select_none" href="javascript:void(0)">Auswahl aufheben</a>
-                        <span id="claim_selection_info"></span>
+                        <input type="submit" id="start_claiming_button" class="btn btn-primary" value="Ausgewählte Gebührenmahnungen durchführen"/>
+                        <span class="claim_run_hint">Es werden nur die ausgewählten Gebührenmahnungen durchgeführt. Die übrigen bleiben anstehend.</span>
                     </form>
+                    
+                    <div class="claim_selection_bar">
+                        <span>
+                            <a class="btn btn-default btn-xs" id="claim_select_all" href="javascript:void(0)">Alle auswählen</a>
+                            <a class="btn btn-default btn-xs" id="claim_select_none" href="javascript:void(0)">Auswahl aufheben</a>
+                        </span>
+                        <span id="claim_selection_info"></span>
+                    </div>
                     <div class="alert alert-info" id="claim_selection_hint" style="display:none; margin-top:10px"></div>
                     
                     <table id="patronsToClaim" class="table table-striped dt-responsive">
@@ -243,7 +249,8 @@
                     $(this).prop('checked', !!selectedClaims[this.value]);
                 });
                 $('#claim_selection_info').text('Ausgewählt: ' + count + ' von maximal ' + claimLimit);
-                $('#start_claiming_button').prop('disabled', count == 0);
+                $('#start_claiming_button').prop('disabled', count == 0)
+                                           .val('Ausgewählte Gebührenmahnungen durchführen' + ( count > 0 ? ' (' + count + ')' : '' ));
             }
             
             // preselect the first claims of the list, at most the number that can be claimed at once

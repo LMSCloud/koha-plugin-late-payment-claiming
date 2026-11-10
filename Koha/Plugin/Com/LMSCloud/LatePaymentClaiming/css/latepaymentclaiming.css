@@ -535,3 +535,83 @@ table#latePaymentClaimHistory tr:nth-child(2) th:nth-child(10) {
 #latepayment_configurations_fieldset {
     scroll-margin-top: 80px;
 }
+
+/*
+ * Option to run the closing actions when a claim is closed by hand. It sits in a
+ * "fieldset.rows" outside the list, where the core rule "fieldset.rows label"
+ * (float, narrow fixed width, right aligned) would break the text word by word.
+ */
+#change_late_payment_claim_unban {
+    clear: both;
+    margin: 1em 0 0 0;
+    padding: 0.6em 0.9em;
+    background: #f7f7f5;
+    border: 1px solid #e0e0da;
+    border-left: 3px solid #b9c9ae;
+    border-radius: 3px;
+}
+
+#change_late_payment_claim_unban .change_late_payment_claim_unban_title {
+    color: #6a6a64;
+    font-size: 90%;
+    margin: 0 0 0.4em 0;
+}
+
+#change_late_payment_claim_unban label {
+    float: none;
+    display: inline;
+    width: auto;
+    margin: 0;
+    text-align: left;
+    font-weight: bold;
+}
+
+#change_late_payment_claim_unban input[type="checkbox"] {
+    margin: 0 0.5em 0 0;
+    vertical-align: middle;
+}
+
+#change_late_payment_claim_unban ul {
+    list-style: disc;
+    margin: 0.5em 0 0 1.5em;
+    padding: 0.5em 0 0 1em;
+    border-top: 1px solid #e6e6e0;
+}
+
+#change_late_payment_claim_unban li {
+    display: list-item;
+    float: none;
+    width: auto;
+    margin: 0 0 0.2em 0;
+    padding: 0;
+}
+
+/*
+ * Interactive claiming: the button to perform the selected claims on top, separated from
+ * the bar to select claims right above the table.
+ */
+#start_claiming_action {
+    margin: 0 0 12px 0;
+}
+
+#start_claiming_action .claim_run_hint {
+    color: #666;
+    margin-left: 0.8em;
+}
+
+.claim_selection_bar {
+    align-items: center;
+    background: #f7f7f5;
+    border: 1px solid #e0e0da;
+    border-radius: 3px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8em;
+    justify-content: space-between;
+    margin: 0 0 10px 0;
+    padding: 0.4em 0.8em;
+}
+
+#claim_selection_info {
+    color: #666;
+}
