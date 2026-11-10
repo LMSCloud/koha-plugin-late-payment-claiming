@@ -508,7 +508,7 @@ sub updateLatePaymentClaim {
         my $historyId = $dbh->{mysql_insertid};
         
         # A claim closed by hand can run the same actions as a claim closed by a payment
-        if ( $action eq 'close' && $claim->{run_unban_actions} && ($previousState // '') ne 'closed' ) {
+        if ( $action eq 'close' && $claim->{run_unban_actions} && ($previousState // '') ne 'closed' && ($updatedClaim->{status} // '') eq 'closed' ) {
             eval { $self->executeClosingActions($claim_id,$updatedClaim,$historyId); };
             carp "Error executing the actions for closing the late payment claim $claim_id: $@" if ( $@ );
         }
@@ -806,9 +806,21 @@ sub closePaidLatePaymentClaim {
 
 }
 
+=head2 executeClaiming
+
+Performs the pending late payment claims. If a list of patron ids is given, only the
+pending claims of these patrons are performed. At most $limitCount claims are performed
+in one go.
+
+The result contains the number of all pending claims (pendingCount) beside the number of
+the performed claims (actionIdCount).
+
+=cut
+
 sub executeClaiming {
     my $self = shift;
     my $limitCount = shift;
+    my $patronIds = shift;
     
     my $error;
     my $errorString;
@@ -816,6 +828,21 @@ sub executeClaiming {
     
     my $configurations = clone($self->{configurations});
     my $claimPatrons = $self->getClaimPatrons($configurations);
+    
+    $result->{pendingCount} = scalar(keys %$claimPatrons);
+    
+    if ( $patronIds && ref($patronIds) eq 'ARRAY' ) {
+        # only the selected claims that are still pending
+        my %selected = map { $_ => 1 } @$patronIds;
+        foreach my $patronId ( keys %$claimPatrons ) {
+            delete $claimPatrons->{$patronId} if ( !$selected{$patronId} );
+        }
+        if ( !scalar(keys %$claimPatrons) ) {
+            $result->{error} = 'noSelection';
+            $result->{errorText} = 'no pending claims selected';
+            return $result;
+        }
+    }
     
     if ( $limitCount && $limitCount >= scalar(keys %$claimPatrons) ) {
         eval {

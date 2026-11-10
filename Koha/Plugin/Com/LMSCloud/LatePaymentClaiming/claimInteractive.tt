@@ -46,7 +46,11 @@
                 [% IF error %]
                     [% IF error == "limitError" %]
                         <div class="alert alert-danger">
-                            Es wurden mehr als <strong>[% countClaimsLimit | html %]</strong> anstehenden Gebührenmahnungen gefunden.
+                            Es wurden mehr als <strong>[% countClaimsLimit | html %]</strong> Gebührenmahnungen zur Durchführung ausgewählt.
+                        </div>
+                    [% ELSIF error == "noSelection" %]
+                        <div class="alert alert-danger">
+                            Es wurde keine anstehende Gebührenmahnung ausgewählt.
                         </div>
                     [% ELSIF error == "executionError" %]
                         <div class="alert alert-danger">
@@ -60,17 +64,19 @@
                         </div>
                     [% END %]
                 [% END %]
-                [% IF patronsToClaim %]
+                [% IF patronsToClaim && patronsToClaim.size > 0 %]
                     <p>
                         Mit dieser Funktion können Sie anstehende Gebührenmahnungen prüfen und gegebenenfalls durchführen.
                         Nachfolgende Tabelle listet alle anstehenden Gebührenmahnfälle der Selektion für die neue Mahnstufe und den durchzuführenden Aktionen auf.
+                        Wählen Sie die Gebührenmahnungen aus, die durchgeführt werden sollen.
                     </p>
                     <p>
                         Es können maximal <strong>[% countClaimsLimit | html %]</strong> Gebührenmahnungen interaktiv durchgeführt werden.
+                        [% IF patronsToClaim.size > countClaimsLimit %]
                         <br/>
-                        Bei mehr als [% countClaimsLimit %] anstehenden Gebührenmahnungen müssen die Gebührenmahnungen im Tageslauf durchgeführt werden.
+                        Es stehen <strong>[% patronsToClaim.size | html %]</strong> Gebührenmahnungen an. Die übrigen bleiben anstehend. Sie können nach dem Durchführen erneut interaktiv durchgeführt oder im Tageslauf gemahnt werden.
+                        [% END %]
                     </p>
-                    [% IF patronsToClaim.size > 0 && patronsToClaim.size <= countClaimsLimit %]
                     <form method="post" id="start_claiming_action">
                         <input type="hidden" name="class" value="[% CLASS %]"/>
                         <input type="hidden" name="method" value="[% METHOD %]"/>
@@ -78,14 +84,19 @@
                         [% TRY %][% PROCESS 'csrf-token.inc' %][% CATCH %][% END %]
                         <input type="hidden" name="do" value="start"/>
                         <input type="hidden" name="toolaction" value="claimInteractive"/>
+                        <input type="hidden" name="patron_ids" id="claim_patron_ids" value=""/>
                         
-                        <input type="submit" value="Anstehende Gebührenmahnungen durchführen"/>
+                        <input type="submit" id="start_claiming_button" value="Ausgewählte Gebührenmahnungen durchführen"/>
+                        <a class="btn btn-default btn-xs" id="claim_select_all" href="javascript:void(0)">Alle auswählen</a>
+                        <a class="btn btn-default btn-xs" id="claim_select_none" href="javascript:void(0)">Auswahl aufheben</a>
+                        <span id="claim_selection_info"></span>
                     </form>
-                    [% END %]
+                    <div class="alert alert-info" id="claim_selection_hint" style="display:none; margin-top:10px"></div>
                     
                     <table id="patronsToClaim" class="table table-striped dt-responsive">
                         <thead>
                             <tr>
+                                <th>Auswahl</th>
                                 <th>Mahn&shy;stufe</th>
                                 <th>Benutzer</th>
                                 <th>Ausweisnummer</th>
@@ -98,8 +109,11 @@
                         </thead>
                         <tbody>
                             [% FOREACH patronToClaim IN patronsToClaim %]
-                            <tr>
+                            <tr data-patron-id="[% patronToClaim.patron.borrowernumber | html %]">
                                 [% patron = patronToClaim.patron %]
+                                <td class="latepaypemnt_claim_list_centercol">
+                                    <input type="checkbox" class="claim_select" value="[% patron.borrowernumber | html %]" aria-label="Gebührenmahnung auswählen"/>
+                                </td>
                                 <td class="latepaypemnt_claim_list_centercol">
                                     [% patronToClaim.level | html %]
                                 </td>
@@ -216,6 +230,29 @@
     [% INCLUDE 'select2.inc' %]
     <script>
         $(document).ready(function() {
+            var claimLimit = [% countClaimsLimit | html %];
+            var selectedClaims = {};
+            
+            function selectedClaimCount() {
+                return Object.keys(selectedClaims).length;
+            }
+            
+            function updateClaimSelection() {
+                var count = selectedClaimCount();
+                $('#patronsToClaim .claim_select').each(function() {
+                    $(this).prop('checked', !!selectedClaims[this.value]);
+                });
+                $('#claim_selection_info').text('Ausgewählt: ' + count + ' von maximal ' + claimLimit);
+                $('#start_claiming_button').prop('disabled', count == 0);
+            }
+            
+            // preselect the first claims of the list, at most the number that can be claimed at once
+            $('#patronsToClaim tbody tr').each(function(index) {
+                if ( index < claimLimit ) {
+                    selectedClaims[$(this).attr('data-patron-id')] = true;
+                }
+            });
+            
             var claimList = $("#patronsToClaim").dataTable($.extend(true, {}, dataTablesDefaults, {
                     'serverSide': false,
                     'deferRender': true,
@@ -235,7 +272,8 @@
                             node.addClass("disabled");
                         }
                     }],
-                    "order": [[ 0, "asc" ],[ 1, "asc" ]],
+                    "columnDefs": [ { "targets": 0, "orderable": false, "searchable": false } ],
+                    "order": [[ 1, "asc" ],[ 2, "asc" ]],
                     "oLanguage": {
                         "sSearch":         "Suchen: ",
                         "sEmptyTable":     "Keine anstehenden Gebührenmahnungen gefunden",
@@ -251,6 +289,7 @@
                         },
                     },
                     drawCallback: function (settings) {
+                        updateClaimSelection();
                         $('.show_patron_selection_details a').click(function() {
                             $('#showSelectionsDetail').html('<ul>'+$(this).parent().find('ul').html()+'</ul>');
                             var modal = $("#show_selections");
@@ -263,6 +302,57 @@
                         } );
                     }
                 }));
+            
+            $('#patronsToClaim').on('change', '.claim_select', function() {
+                if ( this.checked ) {
+                    if ( selectedClaimCount() >= claimLimit ) {
+                        this.checked = false;
+                        $('#claim_selection_hint').text('Es können maximal ' + claimLimit + ' Gebührenmahnungen auf einmal ausgewählt werden.').show();
+                        return;
+                    }
+                    selectedClaims[this.value] = true;
+                } else {
+                    delete selectedClaims[this.value];
+                }
+                $('#claim_selection_hint').hide();
+                updateClaimSelection();
+            });
+            
+            // select the claims in the order and with the filter currently shown, until the limit is reached
+            $('#claim_select_all').on('click', function() {
+                var truncated = false;
+                claimList.api().rows({ search: 'applied', order: 'applied' }).every(function() {
+                    var patronId = $(this.node()).attr('data-patron-id');
+                    if ( selectedClaims[patronId] ) return;
+                    if ( selectedClaimCount() >= claimLimit ) {
+                        truncated = true;
+                        return;
+                    }
+                    selectedClaims[patronId] = true;
+                });
+                if ( truncated ) {
+                    $('#claim_selection_hint').text('Es wurden die ersten ' + claimLimit + ' Gebührenmahnungen der angezeigten Reihenfolge ausgewählt. Mehr können nicht auf einmal durchgeführt werden.').show();
+                } else {
+                    $('#claim_selection_hint').hide();
+                }
+                updateClaimSelection();
+            });
+            
+            $('#claim_select_none').on('click', function() {
+                selectedClaims = {};
+                $('#claim_selection_hint').hide();
+                updateClaimSelection();
+            });
+            
+            $('#start_claiming_action').on('submit', function(event) {
+                if ( selectedClaimCount() == 0 ) {
+                    event.preventDefault();
+                    return;
+                }
+                $('#claim_patron_ids').val(Object.keys(selectedClaims).join(','));
+            });
+            
+            updateClaimSelection();
         });
     </script>
 [% END %]

@@ -422,8 +422,11 @@ sub claimInteractive {
     $template->param( countClaimsLimit => $countClaimsLimit );
     
     if ( $start eq 'start' ) {
+        # the claims selected in the list, at most $countClaimsLimit
+        my @patronIds = grep { /^[0-9]+$/ } map { s/^\s+|\s+$//gr } split( /,/, scalar($cgi->param('patron_ids')) || '' );
+        
         my $doClaim = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming->new();
-        my $result = $doClaim->executeClaiming($countClaimsLimit);
+        my $result = $doClaim->executeClaiming($countClaimsLimit,\@patronIds);
         
         if ( exists($result->{error}) ) {
             my $toClaim = $doClaim->getClaimCases();
@@ -435,7 +438,11 @@ sub claimInteractive {
             );
         }
         elsif ( exists($result->{actionIdList}) ) {
-            $self->store_data({ last_run => dt_from_string()->ymd('-') });
+            # A run of only some of the pending claims must not count as the run of the day,
+            # otherwise the nightly job would not claim the remaining ones.
+            if ( $result->{actionIdCount} >= $result->{pendingCount} ) {
+                $self->store_data({ last_run => dt_from_string()->ymd('-') });
+            }
             $self->claimHistory({ actionIdList => $result->{actionIdList}, actionIdCount => $result->{actionIdCount} });
             exit;
         }
@@ -472,7 +479,8 @@ sub currentClaims {
     
     # actions that can be performed when a claim is closed manually
     my @closingActions;
-    my $unbanActions = eval { decode_json( $self->retrieve_data('unban_actions') || '[]' ) };
+    # retrieve_data returns characters, not UTF-8 bytes, so do not use decode_json here
+    my $unbanActions = eval { JSON->new->allow_nonref->decode( $self->retrieve_data('unban_actions') || '[]' ) };
     if ( ref($unbanActions) eq 'ARRAY' ) {
         @closingActions = grep { defined($_) && length($_) } map { ref($_) eq 'HASH' ? $_->{description} : undef } @$unbanActions;
     }
