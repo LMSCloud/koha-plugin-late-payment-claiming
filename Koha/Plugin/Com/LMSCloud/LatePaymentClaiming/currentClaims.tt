@@ -155,6 +155,19 @@
                                 <textarea id="change_late_payment_claim_comment" data-action="comment" data-claim_id="" rows="8" cols="50"></textarea>
                             </li>
                         </ol>
+                        [% IF unbanActions.size > 0 %]
+                        <div id="change_late_payment_claim_unban" style="display:none; margin-top:1em">
+                            <label for="change_late_payment_claim_run_unban_actions">
+                                <input type="checkbox" id="change_late_payment_claim_run_unban_actions" value="1" checked>
+                                Aktionen bei Abschluss des Mahnfalls durchführen
+                            </label>
+                            <ul>
+                                [% FOREACH unbanAction IN unbanActions %]
+                                <li>[% unbanAction | html %]</li>
+                                [% END %]
+                            </ul>
+                        </div>
+                        [% END %]
                     </fieldset>
                 </div> <!-- /.modal-body -->
             </form> <!-- /#send_runtime_parameter -->
@@ -257,6 +270,10 @@
                 if ( only_comment == false ) {
                     data['status'] = status;
                 }
+                // the checkbox exists only if actions for closing a claim are defined
+                if ( action == 'close' && $('#change_late_payment_claim_run_unban_actions').is(':checked') ) {
+                    data['run_unban_actions'] = true;
+                }
                 let options = {
                     type: 'POST',
                     url: '/api/v1/contrib/latepaymentclaiming/late_payment_claim/' + claim_id,
@@ -301,6 +318,9 @@
                     $('#change_late_payment_claim_comment').data("action",action);
                     $('#change_late_payment_claim_comment').data("claim_id",claim_id);
                     $('#change_late_payment_claim_action_text').text(action_text);
+                    // offer the actions of the automatic closing only when closing a claim
+                    $('#change_late_payment_claim_run_unban_actions').prop('checked',true);
+                    $('#change_late_payment_claim_unban').toggle(action == 'close');
                     modal.modal("show");
                 });
             }
@@ -509,6 +529,9 @@
                             }
                         });
                         params['_order_by'] = lmscOrderBy(data, { fieldMap: fieldMap });
+                        if ( data.search && data.search.value ) {
+                            params['_search'] = data.search.value;
+                        }
                         $.ajax({
                             'dataType': 'json',
                             'type': 'GET',

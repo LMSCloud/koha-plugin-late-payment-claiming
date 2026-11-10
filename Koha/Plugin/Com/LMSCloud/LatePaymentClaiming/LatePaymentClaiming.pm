@@ -216,6 +216,7 @@ sub getLatePaymentClaims {
     my $page_count = shift;
     my $page = shift;
     my $orderBy = shift;
+    my $searchAll = shift;
     
     # print STDERR "getLatePaymentClaims: " . Dumper($parameters);
     
@@ -293,7 +294,30 @@ sub getLatePaymentClaims {
             push @params, $account_balance_to;
         }
     }
-    my $sqlcount = "SELECT count(*) FROM lmsc_late_payment_claim lpc JOIN borrowers b ON (lpc.borrowernumber = b.borrowernumber)";
+    if ( defined($searchAll) && length($searchAll) > 0 ) {
+        # search in all text fields of the claim case and the patron (the search box above the table)
+        my $searchAllTrunc = '%' . $searchAll . '%';
+        my @searchWhere = (
+            "b.cardnumber LIKE ?", "b.surname LIKE ?", "b.firstname LIKE ?", "b.middle_name LIKE ?", "b.title LIKE ?",
+            "b.othernames LIKE ?", "b.address LIKE ?", "b.address2 LIKE ?", "b.city LIKE ?", "b.zipcode LIKE ?",
+            "b.country LIKE ?", "br.branchname LIKE ?", "cat.description LIKE ?", "lpc.comment LIKE ?"
+        );
+        my @searchParams = ($searchAllTrunc) x scalar(@searchWhere);
+        if ( $searchAll =~ /^\s*([0-9]+)\s*$/ ) {
+            # numbers are compared as numbers only if the whole search text is a number
+            push @searchWhere, "lpc.id = ?", "b.borrowernumber = ?", "lpc.level = ?";
+            push @searchParams, $1, $1, $1;
+        }
+        push @where, "(" . join(" OR ", @searchWhere) . ")";
+        push @params, @searchParams;
+    }
+    my $sqlcount = q{
+                        SELECT  count(*) 
+                        FROM    lmsc_late_payment_claim lpc 
+                                JOIN borrowers b ON (lpc.borrowernumber = b.borrowernumber)
+                                JOIN branches br ON (b.branchcode = br.branchcode) 
+                                JOIN categories cat ON (b.categorycode = cat.categorycode)
+                    };
     my $sqlfetch = q{
                         SELECT  lpc.*,
                                 lpc.state AS status,
@@ -431,6 +455,8 @@ sub updateLatePaymentClaim {
 
     my $dbh = C4::Context->dbh;
     
+    my ($previousState) = $dbh->selectrow_array("SELECT state FROM lmsc_late_payment_claim WHERE id = ?",undef,$claim_id);
+    
     my @fields;
     my @data;
     
@@ -479,9 +505,49 @@ sub updateLatePaymentClaim {
         my $usernumber = (ref($userenv) eq 'HASH') ? $userenv->{'number'} : undef;
         
         $dbh->do("INSERT INTO lmsc_late_payment_claim_history (claim_id,action,level,comment,amountoutstanding,manager_id) VALUES (?,?,?,?,?,?)",undef,$claim_id,$action,$updatedClaim->{level},$comment,$updatedClaim->{account_balance},$usernumber);
+        my $historyId = $dbh->{mysql_insertid};
+        
+        # A claim closed by hand can run the same actions as a claim closed by a payment
+        if ( $action eq 'close' && $claim->{run_unban_actions} && ($previousState // '') ne 'closed' ) {
+            eval { $self->executeClosingActions($claim_id,$updatedClaim,$historyId); };
+            carp "Error executing the actions for closing the late payment claim $claim_id: $@" if ( $@ );
+        }
     }
     
     return $updatedClaim;
+}
+
+=head2 executeClosingActions
+
+Performs the actions defined for the automatic closing of a claim ('unban_actions' of the
+plugin) for a claim that has been closed manually. What the actions did is stored with the
+history entry of the closing.
+
+=cut
+
+sub executeClosingActions {
+    my $self = shift;
+    my $claim_id = shift;
+    my $claim = shift;
+    my $historyId = shift;
+    
+    my $dbh = C4::Context->dbh;
+    my $json = JSON->new->allow_nonref;
+    
+    my ($unbanJSON) = $dbh->selectrow_array(
+                    "SELECT plugin_value FROM plugin_data WHERE plugin_class = ? AND plugin_key = ?", 
+                    undef, 'Koha::Plugin::Com::LMSCloud::LatePaymentClaiming', 'unban_actions');
+    my $unbanActions = eval { $json->decode( $unbanJSON || '[]' ) };
+    return if ( !$unbanActions || ref($unbanActions) ne 'ARRAY' || !scalar(@$unbanActions) );
+    
+    my $executedActions = clone( $unbanActions );
+    my $doActions = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::BanActions->new();
+    $doActions->executeBanActions($claim->{borrowernumber},$claim_id,$claim->{level},$executedActions);
+    
+    $dbh->do("UPDATE lmsc_late_payment_claim_history SET ban_actions = ? WHERE id = ?",
+                    undef,
+                    $json->encode( $executedActions ),
+                    $historyId);
 }
 
 sub getLatePaymentClaimHistory {

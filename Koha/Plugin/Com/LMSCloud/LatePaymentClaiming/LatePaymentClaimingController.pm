@@ -132,7 +132,7 @@ sub getLatePaymentClaims {
                          comment => $param->{comment},
                          account_balance => $param->{account_balance}
                      };
-    my $result = $lpc->getLatePaymentClaims($parameters,$param->{_per_page},$param->{_page},$param->{_order_by});
+    my $result = $lpc->getLatePaymentClaims($parameters,$param->{_per_page},$param->{_page},$param->{_order_by},$param->{_search});
     
     my $resultClaims = [];
     

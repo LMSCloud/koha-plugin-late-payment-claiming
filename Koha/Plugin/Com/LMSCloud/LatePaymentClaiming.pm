@@ -470,9 +470,17 @@ sub currentClaims {
     my @branches = map { value => $_->branchcode, label => $_->branchname }, Koha::Libraries->search_filtered({ -or => [ mobilebranch => undef, mobilebranch => '' ] }, { order_by => 'branchname' })->as_list;
     my @categorylist = map { value => $_->categorycode, label => $_->description }, Koha::Patron::Categories->search({}, {order_by => ['description']})->as_list;
     
+    # actions that can be performed when a claim is closed manually
+    my @closingActions;
+    my $unbanActions = eval { decode_json( $self->retrieve_data('unban_actions') || '[]' ) };
+    if ( ref($unbanActions) eq 'ARRAY' ) {
+        @closingActions = grep { defined($_) && length($_) } map { ref($_) eq 'HASH' ? $_->{description} : undef } @$unbanActions;
+    }
+    
     $template->param( 
         status_filter => $status_filter,
         patron_id => $patron_id,
+        unbanActions => \@closingActions,
         action => 'list',
         branches => \@branches, 
         categorylist => \@categorylist 

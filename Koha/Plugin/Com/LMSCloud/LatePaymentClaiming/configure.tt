@@ -563,7 +563,7 @@
                                     [% IF Koha.Preference('PatronRestrictionTypes') %]
                                     <li>
                                         <label class="radio" for="late_payment_claim_action_delete_debarement_type">
-                                            <input type="radio" value="type" name="late_payment_claim_action_delete_debarement" id="late_payment_claim_action_delete_debarement_type">Lösche Sperren des Typs
+                                            <input type="radio" value="type" name="late_payment_claim_action_delete_debarement" id="late_payment_claim_action_delete_debarement_type">Lösche alle Sperren des Typs
                                         </label>
                                         <select name="late_payment_claim_action_delete_debarement_types" id="late_payment_claim_action_delete_debarement_types">
                                             [% FOREACH restriction_type IN restriction_types %]
@@ -578,6 +578,11 @@
                                         </select>
                                     </li>
                                     [% END %]
+                                    <li>
+                                        <label class="radio" for="late_payment_claim_action_delete_debarement_claim">
+                                            <input type="radio" value="claim" name="late_payment_claim_action_delete_debarement" id="late_payment_claim_action_delete_debarement_claim">Lösche durch den Mahnfall gesetzte Sperren
+                                        </label>
+                                    </li>
                                     <li>
                                         <label class="radio" for="late_payment_claim_action_delete_debarement_all">
                                             <input type="radio" value="all" name="late_payment_claim_action_delete_debarement" id="late_payment_claim_action_delete_debarement_all">Lösche alle Sperren
@@ -606,9 +611,9 @@
                                             <span>Ausleihnotiz:</span>
                                         </label>
                                         <input type="text" name="late_payment_claim_action_set_field_borrowernotes" id="late_payment_claim_action_set_field_borrowernotes" value="" />
-                                        <label for="late_payment_claim_action_set_field_borrowernotes_append" class="late_payment_claim_action_set_field_append">
+                                        <label for="late_payment_claim_action_set_field_borrowernotes_append" class="late_payment_claim_action_set_field_append" title="Mit Haken wird der Text an die vorhandene Notiz angehängt. Ohne Haken wird die gesamte Notiz durch den Text ersetzt.">
                                            <input type="checkbox" name="late_payment_claim_action_set_field_borrowernotes_append" id="late_payment_claim_action_set_field_borrowernotes_append" value="1" checked >
-                                           Anhängen
+                                           An Notiz anhängen
                                         </label>
                                     </li>
                                     <li class="late_payment_claim_action_set_field_with_li_append">
@@ -616,10 +621,17 @@
                                             <span>OPAC-Notiz:</span>
                                         </label>
                                         <input type="text" name="late_payment_claim_action_set_field_opacnote" id="late_payment_claim_action_set_field_opacnote" value="" />
-                                        <label for="late_payment_claim_action_set_field_opacnote_append" class="late_payment_claim_action_set_field_append">
+                                        <label for="late_payment_claim_action_set_field_opacnote_append" class="late_payment_claim_action_set_field_append" title="Mit Haken wird der Text an die vorhandene Notiz angehängt. Ohne Haken wird die gesamte Notiz durch den Text ersetzt.">
                                            <input type="checkbox" name="late_payment_claim_action_set_field_opacnote_append" id="late_payment_claim_action_set_field_opacnote_append" value="1" checked >
-                                           Anhängen
+                                           An Notiz anhängen
                                         </label>
+                                    </li>
+                                    <li>
+                                        <span class="hint">
+                                            Mit dem Haken "An Notiz anhängen" wird der Text an die vorhandene Notiz angehängt.
+                                            Ohne den Haken wird die gesamte Notiz durch den Text ersetzt, auch ein Text, den eine andere Aktion zuvor gesetzt hat.
+                                            Mehrere Aktionen einer Stufe werden in der Reihenfolge der Konfiguration ausgeführt.
+                                        </span>
                                     </li>
                                     <li>
                                         <label class="radio" for="late_payment_claim_action_set_field_dateexpiry_action">
@@ -2394,9 +2406,12 @@
             if ( $("#late_payment_claim_action_delete_debarement_all").prop('checked') ) {
                 description = 'Lösche alle Sperren';
             }
+            else if ( $("#late_payment_claim_action_delete_debarement_claim").prop('checked') ) {
+                description = 'Lösche durch den Mahnfall gesetzte Sperren';
+            }
             else if ( $("#late_payment_claim_action_delete_debarement_type").prop('checked') ) {
 				delete_debarement_types  = $("#late_payment_claim_action_delete_debarement_types").val();
-                description = 'Lösche Sperren des Typs "' +
+                description = 'Lösche alle Sperren des Typs "' +
                           $("#late_payment_claim_action_delete_debarement_types option:selected").text() + '"';
             }
             action = {
@@ -2404,6 +2419,7 @@
                          params: {
                              delete_debarement_type: $("#late_payment_claim_action_delete_debarement_type").prop('checked'),
                              delete_debarement_types: delete_debarement_types,
+                             delete_debarement_claim: $("#late_payment_claim_action_delete_debarement_claim").prop('checked'),
                              delete_debarement_all: $("#late_payment_claim_action_delete_debarement_all").prop('checked')
                          },
                          description: description
@@ -2423,17 +2439,17 @@
             if ( $("#late_payment_claim_action_set_field_borrowernotes").val().length > 0 ) {
                 if ( description.length > 0 ) description += ", ";
                 if ( $("#late_payment_claim_action_set_field_borrowernotes_append").prop('checked') == true ) {
-                    description += 'die angehängte Ausleihnotiz auf "' + $("#late_payment_claim_action_set_field_borrowernotes").val() + '"';
+                    description += 'die Ausleihnotiz auf "' + $("#late_payment_claim_action_set_field_borrowernotes").val() + '" (an die vorhandene Notiz angehängt)';
                 } else {
-                    description += 'die Ausleihnotiz auf "' + $("#late_payment_claim_action_set_field_borrowernotes").val() + '"';
+                    description += 'die Ausleihnotiz auf "' + $("#late_payment_claim_action_set_field_borrowernotes").val() + '" (ersetzt die vorhandene Notiz)';
                 }
             }
             if ( $("#late_payment_claim_action_set_field_opacnote").val().length > 0 ) {
                 if ( description.length > 0 ) description += ", ";
                 if ( $("#late_payment_claim_action_set_field_opacnote_append").prop('checked') == true ) {
-                    description += 'die angehängte OPAC-Notiz auf "' + $("#late_payment_claim_action_set_field_opacnote").val() + '"';
+                    description += 'die OPAC-Notiz auf "' + $("#late_payment_claim_action_set_field_opacnote").val() + '" (an die vorhandene Notiz angehängt)';
                 } else {
-                    description += 'die OPAC-Notiz auf "' + $("#late_payment_claim_action_set_field_opacnote").val() + '"';
+                    description += 'die OPAC-Notiz auf "' + $("#late_payment_claim_action_set_field_opacnote").val() + '" (ersetzt die vorhandene Notiz)';
                 }
             }
             if ( $("#late_payment_claim_action_set_field_dateexpiry_action").val().length > 0 ) {
@@ -2617,6 +2633,7 @@
                 if ( $("#late_payment_claim_action_delete_debarement_types").length > 0 ) {
                     $("#late_payment_claim_action_delete_debarement_types").val(item.params.delete_debarement_types);
                 }
+                $("#late_payment_claim_action_delete_debarement_claim").prop('checked',item.params.delete_debarement_claim === true);
                 $("#late_payment_claim_action_delete_debarement_all").prop('checked',item.params.delete_debarement_all);
                 $("a[data-tabname='action_debarement_delete_tab'").click();
                 break;
@@ -2734,7 +2751,8 @@
         if ( $("#late_payment_claim_action_delete_debarement_types").length > 0 ) {
             $('#late_payment_claim_action_delete_debarement_types')[0].selectedIndex = 0;
         }
-        $('#late_payment_claim_action_delete_debarement_all').prop('checked',true);
+        $('#late_payment_claim_action_delete_debarement_claim').prop('checked',true);
+        $('#late_payment_claim_action_delete_debarement_all').prop('checked',false);
         
         $('#late_payment_claim_action_set_field_categorycode')[0].selectedIndex = 0;
         $("#late_payment_claim_action_set_field_borrowernotes").val('');

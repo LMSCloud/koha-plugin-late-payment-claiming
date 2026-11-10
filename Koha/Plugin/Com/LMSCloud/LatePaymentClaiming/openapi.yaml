@@ -1019,6 +1019,11 @@ paths:
           description: Search the account balance 
           required: false
           type: string
+        - name: _search
+          description: Search all fields
+          in: query
+          required: false
+          type: string
         - name: _per_page
           description: "Page size, for paginated object listing"
           in: query
@@ -1301,6 +1306,9 @@ paths:
               action:
                 description: Action of the data change
                 type: string
+              run_unban_actions:
+                description: If the action is close, perform the actions defined for the automatic closing of a claim
+                type: boolean
       responses:
         "200":
           description: The changed comment of the late payment claim

@@ -104,10 +104,15 @@ sub executeBanActions {
                 $self->patronListAction($patron,$ban_action->{parameter},$templateVars);
             }
             elsif ( $ban_action->{action} eq 'delete_debarement' ) {
-                $self->deleteDebarementAction($patron,$ban_action->{parameter},$templateVars);
+                my $result = $self->deleteDebarementAction($patron,$ban_action->{parameter},$templateVars,$claim_id);
+                if ( $result ) {
+                    $ban_action->{result} = $result;
+                    $ban_action->{description} = ( $ban_action->{description} // '' ) . ' [' . $result . ']';
+                }
             }
             elsif ( $ban_action->{action} eq 'debarement' ) {
-                $self->addDebarementAction($patron,$ban_action->{parameter},$templateVars);
+                # remember the restriction so that it can be removed again by the claim case
+                $ban_action->{applied} = $self->addDebarementAction($patron,$ban_action->{parameter},$templateVars);
             }
             elsif ( $ban_action->{action} eq 'fee' ) {
                 $self->addFeeAction($patron,$ban_action->{parameter},$templateVars);
@@ -279,14 +284,36 @@ sub addDebarementAction {
     if ( $expirationDays ) {
         $debarmentParams->{expiration} = output_pref( { 'dt' => DateTime->now()->add( days => $expirationDays ), dateformat => 'iso', dateonly => 1 } );
     }
-    AddDebarment($debarmentParams);
+    
+    # AddDebarment does not return the id of the restriction, so look for the new one
+    my $dbh = C4::Context->dbh;
+    my ($lastId) = $dbh->selectrow_array("SELECT MAX(borrower_debarment_id) FROM borrower_debarments WHERE borrowernumber = ?",undef,$patron->borrowernumber);
+    $lastId //= 0;
+    
+    my $applied = {};
+    if ( AddDebarment($debarmentParams) ) {
+        my ($newId) = $dbh->selectrow_array("SELECT MAX(borrower_debarment_id) FROM borrower_debarments WHERE borrowernumber = ? AND type = ? AND borrower_debarment_id > ?",undef,$patron->borrowernumber,$type,$lastId);
+        $applied->{restriction_id} = $newId + 0 if ( $newId );
+    }
+    return $applied;
 }
+
+=head2 deleteDebarementAction
+
+Deletes restrictions of a patron: all restrictions of a type, all restrictions, or
+only the restrictions that were set by the claim case (parameter delete_debarement_claim).
+
+Returns a short description of the result for the claim history if restrictions of
+the claim case were handled.
+
+=cut
 
 sub deleteDebarementAction {
     my $self = shift;
     my $patron = shift;
     my $parameters = shift;
     my $templateVars = shift;
+    my $claim_id = shift;
     
     my $params = {};
     
@@ -296,9 +323,13 @@ sub deleteDebarementAction {
     
     my $delType = ( $params->{delete_debarement_type} && $params->{delete_debarement_type} == JSON::true );
     my $delAll  = ( $params->{delete_debarement_all} && $params->{delete_debarement_all} == JSON::true );
+    my $delClaim = ( $params->{delete_debarement_claim} && $params->{delete_debarement_claim} == JSON::true );
     my $type    = $params->{delete_debarement_types};
 
-    if ( $delType && $type ) {
+    if ( $delClaim ) {
+        return $self->deleteClaimDebarements($patron,$claim_id);
+    }
+    elsif ( $delType && $type ) {
         my @debarements = $patron->restrictions->search( { type => $type } )->as_list;
         foreach my $debarement( @debarements ) {
             DelDebarment( $debarement->borrower_debarment_id );
@@ -310,6 +341,95 @@ sub deleteDebarementAction {
             DelDebarment( $debarement->borrower_debarment_id );
         }
     }
+}
+
+=head2 claimedHistory
+
+Returns the 'claimed' history entries of a claim case, newest first.
+
+=cut
+
+sub claimedHistory {
+    my $self = shift;
+    my $claim_id = shift;
+    
+    return C4::Context->dbh->selectall_arrayref(
+                    q{SELECT id, level, timestamp, manager_id, ban_actions 
+                      FROM   lmsc_late_payment_claim_history 
+                      WHERE  claim_id = ? AND action = 'claimed' 
+                      ORDER  BY timestamp DESC, id DESC}, 
+                    { Slice => {} }, $claim_id);
+}
+
+=head2 deleteClaimDebarements
+
+Deletes the restrictions that the actions of the claim case have set. The ids of the
+restrictions are stored with the 'claimed' history entries. For history entries written
+before the ids were stored, the restriction is looked for by type, comment, staff member
+and the time the history entry was written. If that finds nothing, the restriction stays.
+
+Restrictions that do not exist any more are counted but not touched.
+
+=cut
+
+sub deleteClaimDebarements {
+    my $self = shift;
+    my $patron = shift;
+    my $claim_id = shift;
+    
+    return '' if ( !$claim_id );
+    
+    my $dbh = C4::Context->dbh;
+    my $json = JSON->new->allow_nonref;
+    
+    my $total = 0;
+    my $removed = 0;
+    my $seen = {};
+    
+    foreach my $entry ( @{ $self->claimedHistory($claim_id) } ) {
+        my $actions = eval { $json->decode( $entry->{ban_actions} ) };
+        next if ( !$actions || ref($actions) ne 'ARRAY' );
+        
+        foreach my $action ( @$actions ) {
+            next if ( ref($action) ne 'HASH' || ($action->{action} // '') ne 'debarement' );
+            
+            my $restrictionId;
+            if ( ref($action->{applied}) eq 'HASH' ) {
+                # the id of the restriction was stored (it is missing if the restriction could not be added)
+                $restrictionId = $action->{applied}->{restriction_id};
+            }
+            else {
+                # older entry: find the restriction again
+                my $params = {};
+                foreach my $param ( @{ $action->{parameter} || [] } ) {
+                    $params->{$param->{parameter_name}} = $param->{parameter_value};
+                }
+                my $type = $params->{debarement_type} || 'MANUAL';
+                my $comment = $params->{debarement_comment};
+                $comment = undef if ( defined($comment) && length($comment) == 0 );
+                
+                ($restrictionId) = $dbh->selectrow_array(
+                        q{SELECT borrower_debarment_id 
+                          FROM   borrower_debarments 
+                          WHERE  borrowernumber = ? AND type = ? AND comment <=> ? AND manager_id <=> ? 
+                                 AND created BETWEEN DATE_SUB(?, INTERVAL 1 MINUTE) AND DATE_ADD(?, INTERVAL 1 HOUR)
+                          ORDER  BY borrower_debarment_id},
+                        undef, $patron->borrowernumber, $type, $comment, $entry->{manager_id}, $entry->{timestamp}, $entry->{timestamp});
+            }
+            
+            next if ( !$restrictionId || $seen->{$restrictionId} );
+            $seen->{$restrictionId} = 1;
+            $total++;
+            
+            my $restriction = $patron->restrictions->search( { borrower_debarment_id => $restrictionId } )->next;
+            if ( $restriction ) {
+                DelDebarment( $restrictionId );
+                $removed++;
+            }
+        }
+    }
+    
+    return 'Sperren: ' . ( $total == 0 ? 'keine durch den Mahnfall gesetzten Sperren gefunden' : $removed . ' von ' . $total . ' gelöscht' );
 }
 
 sub patronListAction {
@@ -513,12 +633,7 @@ sub removeNotesAction {
     my $json = JSON->new->allow_nonref;
     
     # claimed history entries of the claim case, newest first
-    my $history = $dbh->selectall_arrayref(
-                    q{SELECT id, level, timestamp, ban_actions 
-                      FROM   lmsc_late_payment_claim_history 
-                      WHERE  claim_id = ? AND action = 'claimed' 
-                      ORDER  BY timestamp DESC, id DESC}, 
-                    { Slice => {} }, $claim_id);
+    my $history = $self->claimedHistory($claim_id);
     
     my $claim = $dbh->selectrow_hashref("SELECT * FROM lmsc_late_payment_claim WHERE id = ?",undef,$claim_id);
     
