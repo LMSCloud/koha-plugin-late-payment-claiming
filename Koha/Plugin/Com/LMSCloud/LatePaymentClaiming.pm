@@ -40,7 +40,7 @@ use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfigu
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming;
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution;
 
-our $VERSION = "1.2.1";
+our $VERSION = "1.2.2";
 our $MINIMUM_VERSION = "22.11";
 
 our $metadata = {
