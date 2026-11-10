@@ -79,6 +79,7 @@ sub searchPatrons {
         if ( $params->{_order_by} ) {
             my @fields = ref( $params->{_order_by} ) eq 'ARRAY' ? @{ $params->{_order_by} } : ( $params->{_order_by} );
             foreach my $field (@fields) {
+                next if ( $field =~ /(password|secret)/i );
                 if ( $field =~ /^-(.+)$/ ) {
                     push @order_by, { -desc => $1 };
                 } elsif ( $field =~ /^\+?(.+)$/ ) {
@@ -103,7 +104,7 @@ sub searchPatrons {
         
         return $c->render(
             status  => 200,
-            openapi => { data => $patrons, recordsFiltered => ($patron_rs->is_paged ? $patron_rs->pager->total_entries : $patron_rs->count), recordsTotal => ($patron_rs->is_paged ? $patron_rs->pager->total_entries : $patron_rs->count), draw => $draw }
+            openapi => { data => $patrons, recordsFiltered => ($patron_rs->is_paged ? $patron_rs->pager->total_entries : $patron_rs->count), recordsTotal => ($patron_rs->is_paged ? $patron_rs->pager->total_entries : $patron_rs->count), draw => ($draw // 0) + 0 }
         );
     
     }
@@ -118,7 +119,17 @@ sub getLatePaymentClaims {
     my $param = $c->validation->output;
     my $lpc = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming->new();
 
-    my $parameters = {
+    # Staff that may use this route only because they work with patrons or at the circulation
+    # desk (not because they may use the plugin tools) only get the current claim of one patron,
+    # as needed for the hint on the patron and circulation pages, and no personal data.
+    my $user = $c->stash('koha.user');
+    my $isToolUser = ( $user && $user->has_permission( { plugins => 'tool' } ) ) ? 1 : 0;
+    
+    my $parameters;
+    my @listParams = ( $param->{_per_page}, $param->{_page}, $param->{_order_by}, $param->{_search} );
+    
+    if ( $isToolUser ) {
+        $parameters = {
                          claim_id => $param->{claim_id},
                          patron_id => $param->{patron_id},
                          cardnumber => $param->{cardnumber},
@@ -132,12 +143,28 @@ sub getLatePaymentClaims {
                          comment => $param->{comment},
                          account_balance => $param->{account_balance}
                      };
-    my $result = $lpc->getLatePaymentClaims($parameters,$param->{_per_page},$param->{_page},$param->{_order_by},$param->{_search});
+    }
+    else {
+        if ( !defined($param->{patron_id}) || $param->{patron_id} !~ /^[0-9]+$/ ) {
+            return $c->render(
+                status  => 403,
+                openapi => { detail => 'Without the permission to use the plugin tools only the claims of one patron can be requested.' }
+            );
+        }
+        $parameters = { patron_id => $param->{patron_id}, status => 'current' };
+        @listParams = ( 20, 1, undef, undef );
+    }
+    
+    my $result = $lpc->getLatePaymentClaims($parameters,@listParams);
     
     my $resultClaims = [];
     
     foreach my $claim( @{$result->{late_payment_claims}} ) {
-        push @$resultClaims, databaseClaim2Api($claim);
+        my $apiClaim = databaseClaim2Api($claim);
+        if ( !$isToolUser ) {
+            $apiClaim = { map { $_ => $apiClaim->{$_} } qw( claim_id patron_id creationdate level status ) };
+        }
+        push @$resultClaims, $apiClaim;
     }
     
     my $returnData = { data => $resultClaims, recordsFiltered => $result->{full_count}, recordsTotal => $result->{full_count} };
@@ -179,7 +206,7 @@ sub getLatePaymentClaimHistory {
     
     return $c->render(
         status  => 200,
-        openapi => { data => $result->{late_payment_claims}, recordsFiltered => $result->{full_count}, recordsTotal => $result->{full_count}, draw => $param->{draw} }
+        openapi => { data => $result->{late_payment_claims}, recordsFiltered => $result->{full_count}, recordsTotal => $result->{full_count}, draw => ($param->{draw} // 0) + 0 }
     );
 }
 
@@ -190,6 +217,9 @@ sub getLatePaymentClaimComment {
     my $lpc = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming->new();
     
     my $comment = $lpc->getLatePaymentClaimComment($claim_id);
+    
+    # the comment of an existing claim is never NULL
+    return $c->render( status => 404, openapi => { detail => 'Late payment claim not found.' } ) if ( !defined($comment) );
     
     return $c->render(
         status  => 200,
@@ -207,6 +237,11 @@ sub updateLatePaymentClaimComment {
     my $lpc = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::LatePaymentClaiming->new();
 
     my $claim = $lpc->updateLatePaymentClaim($claim_id,$body);
+    
+    if ( ref($claim) eq 'HASH' && $claim->{error} ) {
+        return $c->render( status => 404, openapi => { detail => 'Late payment claim not found.' } ) if ( $claim->{error} eq 'notFound' );
+        return $c->render( status => 400, openapi => { detail => 'The action is invalid or does not fit to the status.' } );
+    }
     
     return $c->render(
         status  => 200,
@@ -272,6 +307,7 @@ sub getNextExecutionDays {
     my $execOnClosingDays = $param->{'execOnClosingDays'};
     my $execOnClosingDayLibrary = $param->{'execOnClosingDayLibrary'};
     my $count = (($param->{'count'} || 0) + 0) || 20;
+    $count = 100 if ( $count > 100 );
     
     my $executionChecker = Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::CheckExecution->new();
     

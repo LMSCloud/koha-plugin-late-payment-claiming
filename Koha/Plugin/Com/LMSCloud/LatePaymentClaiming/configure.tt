@@ -8,7 +8,7 @@
 [% USE Koha %]
 [% USE Letters %]
 [% SET footerjs = 1 %]
-[% SET libraries = Branches.all %]
+[% SET libraries = Branches.all( unfiltered => 1 ) %]
 [% SET categories = Categories.all.unblessed %]
 
 [% PROCESS 'patron-search.inc' %]
@@ -61,8 +61,8 @@
                 <!-- Notice our form here has no 'action', this is good, it means that our forms will always get passed back to 'plugins/run.pl'. You could hard code it instead if you prefer -->
                 <form method="post" id="general_settings_form">
                 
-                    <input type="hidden" name="class" value="[% CLASS %]"/>
-                    <input type="hidden" name="method" value="[% METHOD %]"/>
+                    <input type="hidden" name="class" value="[% CLASS | html %]"/>
+                    <input type="hidden" name="method" value="[% METHOD | html %]"/>
                     [%# Koha's CSRF middleware rejects any POST without a token; the include is missing before 24.05 %]
                     [% TRY %][% PROCESS 'csrf-token.inc' %][% CATCH %][% END %]
                     
@@ -100,17 +100,17 @@
                             </li>
                             <li>
                                 <label class="radio" for="execution_month_days">Ausführung an Tagen des Monats:</label>
-                                <input name="execution_month_days" size="20" maxlength="256" value=[% execution_month_days | html %]>
+                                <input name="execution_month_days" size="20" maxlength="256" value="[% execution_month_days | html %]">
                                 <span>An cron-angelehnte Angabe für die Tage eines Monats, an denen das Skript ausgeführt werden soll.</span>
                             </li>
                             <li>
                                 <label class="radio" for="execution_monthes">Ausführung in den Monaten:</label>
-                                <input name="execution_monthes" size="20" maxlength="256" value=[% execution_monthes | html %]>
+                                <input name="execution_monthes" size="20" maxlength="256" value="[% execution_monthes | html %]">
                                 <span>An cron-angelehnte Angabe von Monaten, an denen das Skript ausgeführt werden soll.</span>
                             </li>
                             <li>
                                 <label class="radio" for="execution_monthes">Ausführung an Wochentagen:</label>
-                                <input name="execution_weekdays" size="20" maxlength="256" value=[% execution_weekdays | html %]>
+                                <input name="execution_weekdays" size="20" maxlength="256" value="[% execution_weekdays | html %]">
                                 <span>An cron-angelehnte Angabe von Wochentagen, an denen das Skript ausgeführt werden soll.</span>
                             </li>
                             <li>
@@ -150,7 +150,7 @@
                             <li>
                                 <label class="radio" for="execution_on_closing_days_library">Benutze Kalender der Zweigstelle:</label>
                                 <select name="execution_on_closing_days_library" id="execution_on_closing_days_library">
-                                    [% FOREACH branch IN Branches.all( unfiltered => 1, restrict => NoMobileStations) %]
+                                    [% FOREACH branch IN Branches.all( unfiltered => 1, restrict => 'NoMobileStations') %]
                                         [% IF execution_on_closing_days_library == branch.branchcode %]
                                         <option value="[% branch.branchcode | html %]"  selected>[% branch.branchname | html %]</option>
                                         [% ELSE %]
@@ -182,7 +182,7 @@
                             </li>
                             <li>
                                 <label class="radio" for="account_balance_for_closing">Kontostand für automatischen Abschluss des Mahnfalls:</label>
-                                <input id="account_balance_for_closing" name="account_balance_for_closing" type="number" step="0.01" lang="en" inputmode="decimal" pattern="^\d+(\.\d{2})?$" value=[% account_balance_for_closing | html %]>
+                                <input id="account_balance_for_closing" name="account_balance_for_closing" type="number" step="0.01" lang="en" inputmode="decimal" pattern="^\d+(\.\d{2})?$" value="[% account_balance_for_closing | html %]">
                                 <span>Betrag, ab dem ein Konto bei einer Gebührenbezahlung als ausgeglichen gilt. Mit dem Erreichen dieses Kontostandes wird ein laufender oder pausierter Mahnfall bei der Bezahlung automatisch abgeschlossen.</span>
                             </li>
                             <li>
@@ -269,7 +269,7 @@
                                     <td class="latepayment_config_list_branch">
                                         <select name="latepayment_config_branchcode" id="latepayment_config_branchcode">
                                             <option value="*">Alle</option>
-                                            [% FOREACH branch IN Branches.all( unfiltered => 1, restrict => NoMobileStations) %]
+                                            [% FOREACH branch IN Branches.all( unfiltered => 1, restrict => 'NoMobileStations') %]
                                                 <option value="[% branch.branchcode | html %]">[% branch.branchname | html %]</option>
                                             [% END %]
                                         </select>
@@ -306,8 +306,8 @@
                 <form method="get">
                 
                     <input type="hidden" name="do" value="edit_general">
-                    <input type="hidden" name="class" value="[% CLASS %]"/>
-                    <input type="hidden" name="method" value="[% METHOD %]"/>
+                    <input type="hidden" name="class" value="[% CLASS | html %]"/>
+                    <input type="hidden" name="method" value="[% METHOD | html %]"/>
                     
                     <fieldset class="rows late_payment_edit_config">
 
@@ -808,12 +808,12 @@
 [% IF action == "edit_config" %]
 
     <!-- Patron list setup -->
-    <div class="modal" id="selection_patron_list" tabindex="-1" role="dialog" aria-labelledby="action_selectionLabel">
+    <div class="modal" id="selection_patron_list" tabindex="-1" role="dialog" aria-labelledby="selection_patron_list_title">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="closebtn" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title" id="action_selectionLabel">Liste der ausgewählten Benutzer</h4>
+                    <h4 class="modal-title" id="selection_patron_list_title">Liste der ausgewählten Benutzer</h4>
                 </div>
                 <div class="modal-body">
                     <table id="patronSearchResult" class="table table-striped dt-responsive" style="table-layout: fixed; width: 100%">
@@ -845,12 +845,12 @@
     </div> <!-- /.modal -->
 
     <!-- Patron selection setup -->
-    <div class="modal" id="patron_selection" tabindex="-1" role="dialog" aria-labelledby="action_selectionLabel">
+    <div class="modal" id="patron_selection" tabindex="-1" role="dialog" aria-labelledby="patron_selection_title">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="closebtn" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title" id="action_selectionLabel">Wählen Sie Suchparameter für die Benutzerauswahl</h4>
+                    <h4 class="modal-title" id="patron_selection_title">Wählen Sie Suchparameter für die Benutzerauswahl</h4>
                 </div>
                 <div class="modal-body">
                     <aside>
@@ -978,7 +978,7 @@
                                        <select id="latepayment_search_lastlettercode_filter">
                                            <option value="">Keine Auswahl</option>
                                            [% FOREACH l IN letters %]
-                                           <option value="[% l.code %]">[% l.name %]</option>
+                                           <option value="[% l.code | html %]">[% l.name | html %]</option>
                                            [% END %]
                                         </select>
                                         <label for="latepayment_search_lastlettercode_filter_negate" class="latepayment_search_option_negate">
@@ -1019,7 +1019,7 @@
                                         <select id="latepayment_search_patronlistid_filter">
                                             <option value="">Keine Auswahl</option>
                                             [% FOREACH p IN patron_lists %]
-                                            <option value="[% p.patron_list_id %]">[% p.name %]</option>
+                                            <option value="[% p.patron_list_id | html %]">[% p.name | html %]</option>
                                             [% END %]
                                         </select>
                                         <label for="latepayment_search_patronlistid_filter_negate" class="latepayment_search_option_negate">
@@ -1076,9 +1076,11 @@
     
     var unban_actions = readBanActions([% unban_actions %]);
     
+    [% SET jsLibraryId = library_id || '' %]
+    [% SET jsCategoryId = category_id || '' %]
     var lateClaimConfig = {
-                              library_id: '[% library_id | html %]',
-                              category_id: '[% category_id | html %]',
+                              library_id: [% jsLibraryId.json %],
+                              category_id: [% jsCategoryId.json %],
                               level_configuration: [
                                   {
                                       level: 0,
@@ -1680,7 +1682,7 @@
                                                    '<a class="btn btn-default btn-xs latepayment_patron_selection_do_delete"><i class="fa fa-times" aria-hidden="true"></i> Löschen</a>' + 
                                                    '</td>');
         item.forEach((selection, index) => {
-            addRow.find(".latepayment_userselection_list ul").append($('<li>').append(selection.description));
+            addRow.find(".latepayment_userselection_list ul").append($('<li>').text(selection.description));
         });
         addRow.find(".latepayment_userselection_nr").append(index+1);
         addRow.find(".latepayment_patron_selection_do_edit").on( "click", function() {
@@ -1704,7 +1706,7 @@
                                                    '<a class="btn btn-default btn-xs latepayment_action_do_edit"><i class="fa fa-pencil-square-o fa-pen-to-square" aria-hidden="true"></i> Bearbeiten</a>' + 
                                                    '<a class="btn btn-default btn-xs latepayment_action_do_delete"><i class="fa fa-times" aria-hidden="true"></i> Löschen</a>' + 
                                                    '</td>');
-        addRow.find(".latepayment_action_list ul").append($('<li>').append(action.description));
+        addRow.find(".latepayment_action_list ul").append($('<li>').text(action.description));
 
         addRow.find(".latepayment_action_nr").append(index+1);
         addRow.find(".latepayment_action_do_edit").on( "click", function() {
@@ -1725,7 +1727,7 @@
                                                    '<a class="btn btn-default btn-xs unban_action_do_edit"><i class="fa fa-pencil-square-o fa-pen-to-square" aria-hidden="true"></i> Bearbeiten</a>' + 
                                                    '<a class="btn btn-default btn-xs unban_action_do_delete"><i class="fa fa-times" aria-hidden="true"></i> Löschen</a>' + 
                                                    '</td>');
-        addRow.find(".unban_action_list ul").append($('<li>').append(action.description));
+        addRow.find(".unban_action_list ul").append($('<li>').text(action.description));
 
         addRow.find(".unban_action_nr").append(index+1);
         addRow.find(".unban_action_do_edit").on( "click", function() {
@@ -1743,20 +1745,20 @@
         var row = $('#latepayment_claim_' + level + ' .latepayment_userselection_' + index);
         row.find(".latepayment_userselection_list ul").empty();
         item.forEach((selection, index) => {
-            row.find(".latepayment_userselection_list ul").append($('<li>').append(selection.description));
+            row.find(".latepayment_userselection_list ul").append($('<li>').text(selection.description));
         });
     }
     
     function updateLatePaymentClaimLevelAction(level,item,index) {
         var row = $('#latepayment_claim_' + level + ' .latepayment_action_' + index);
         row.find(".latepayment_action_list ul").empty();
-        row.find(".latepayment_action_list ul").append($('<li>').append(item.description));
+        row.find(".latepayment_action_list ul").append($('<li>').text(item.description));
     }
     
     function updateUnbanAction(item,index) {
         var row = $('#actions_for_automatic_closing .unban_action_' + index);
         row.find(".unban_action_list ul").empty();
-        row.find(".unban_action_list ul").append($('<li>').append(item.description));
+        row.find(".unban_action_list ul").append($('<li>').text(item.description));
     }
     
     function editLatePaymentSelectionList(level,index) {
@@ -1777,7 +1779,7 @@
     function setRemoveNotesTabVisible(visible) {
         var $tab = $("a[data-tabname='action_remove_notes_tab']");
         if ( !visible && isTabActive('action_remove_notes_tab') ) {
-            $("a[data-tabname='action_claim_tab']").click();
+            $("a[data-tabname='action_claim_tab']").tab('show');
         }
         $tab.closest('li').toggle(visible);
     }
@@ -1892,7 +1894,7 @@
                         data: 'library_id',
                         sWidth: "13%",
                         render: function( data, type, row, meta ) {
-                            let library_name = libraries_map[data].branchname
+                            let library_name = (libraries_map[data] || { branchname: data }).branchname
                             if( !singleBranchMode && data == logged_in_library_id ) {
                                 return "<span class=\"currentlibrary\">" + escape_str(library_name) + "</span>";
                             } else {
@@ -1905,7 +1907,7 @@
                         data: 'category_id',
                         sWidth: "12%",
                         render: function( data, type, row, meta ) {
-                            return escape_str(categories_map[data.toLowerCase()].description);
+                            return escape_str((categories_map[data.toLowerCase()] || { description: data }).description);
                         }
                     },
                     { 
@@ -2611,14 +2613,14 @@
                 $("#late_payment_claim_action_letter_charge").val(item.params.letter_charge);
                 $("#late_payment_claim_action_letter_charge_description").val(item.params.letter_charge_description);
                 $("#late_payment_claim_action_letter_charge_note").val(item.params.letter_charge_note);
-                $("a[data-tabname='action_claim_tab'").click();
+                $("a[data-tabname='action_claim_tab']").tab('show');
                 break;
             case "fee":
                 $("#late_payment_claim_action_fee_debit_type").val(item.params.fee_debit_type);
                 $("#late_payment_claim_action_fee_amount").val(item.params.fee_amount);
                 $("#late_payment_claim_action_fee_description").val(item.params.fee_description);
                 $("#late_payment_claim_action_fee_note").val(item.params.fee_note);
-                $("a[data-tabname='action_fee_tab'").click();
+                $("a[data-tabname='action_fee_tab']").tab('show');
                 break;
             case "debarement":
                 if ( $("#late_payment_claim_action_debarement_type").length > 0 ) {
@@ -2626,7 +2628,7 @@
                 }
                 $("#late_payment_claim_action_debarement_comment").val(item.params.debarement_comment);
                 $("#late_payment_claim_action_debarement_expiration").val(item.params.debarement_expiration);
-                $("a[data-tabname='action_debarement_tab'").click();
+                $("a[data-tabname='action_debarement_tab']").tab('show');
                 break;
             case "delete_debarement":
                 $("#late_payment_claim_action_delete_debarement_type").prop('checked',item.params.delete_debarement_type);
@@ -2635,7 +2637,7 @@
                 }
                 $("#late_payment_claim_action_delete_debarement_claim").prop('checked',item.params.delete_debarement_claim === true);
                 $("#late_payment_claim_action_delete_debarement_all").prop('checked',item.params.delete_debarement_all);
-                $("a[data-tabname='action_debarement_delete_tab'").click();
+                $("a[data-tabname='action_debarement_delete_tab']").tab('show');
                 break;
             case "set_field":
                 $("#late_payment_claim_action_set_field_categorycode").val(item.params.set_field_categorycode);
@@ -2644,20 +2646,21 @@
                 $("#late_payment_claim_action_set_field_opacnote").val(item.params.set_field_opacnote);
                 $("#late_payment_claim_action_set_field_opacnote_append").prop('checked',item.params.set_field_opacnote_append);
                 $("#late_payment_claim_action_set_field_dateexpiry_action").val(item.params.set_field_dateexpiry_action);
-                $("#late_payment_claim_action_set_field_attribute_code").val(item.params.set_field_attribute_code);
+                // changing the attribute rebuilds the value input (text or select), so do it before setting the value
+                $("#late_payment_claim_action_set_field_attribute_code").val(item.params.set_field_attribute_code).change();
                 $("#late_payment_claim_action_set_field_attribute_value").val(item.params.set_field_attribute_value);
-                $("a[data-tabname='action_user_value_tab'").click();
+                $("a[data-tabname='action_user_value_tab']").tab('show');
                 break;
             case "patron_list":
                 $("#late_payment_claim_action_patron_list").val(item.params.patron_list);
                 $("#late_payment_claim_action_patron_list_add").prop('checked',item.params.patron_list_add);
                 $("#late_payment_claim_action_patron_list_delete").prop('checked',item.params.patron_list_delete);
-                $("a[data-tabname='action_add_list_tab'").click();
+                $("a[data-tabname='action_add_list_tab']").tab('show');
                 break;
             case "remove_notes":
                 $("#late_payment_claim_action_remove_notes_borrowernotes").prop('checked',item.params.remove_notes_borrowernotes);
                 $("#late_payment_claim_action_remove_notes_opacnote").prop('checked',item.params.remove_notes_opacnote);
-                $("a[data-tabname='action_remove_notes_tab'").click();
+                $("a[data-tabname='action_remove_notes_tab']").tab('show');
                 break;
         }
     }
@@ -2764,6 +2767,7 @@
         // attributes are configured, so they may not exist at all.
         if ( $('#late_payment_claim_action_set_field_attribute_code').length > 0 ) {
             $('#late_payment_claim_action_set_field_attribute_code')[0].selectedIndex = 0;
+            $('#late_payment_claim_action_set_field_attribute_code').change();
         }
         if ( $('#late_payment_claim_action_set_field_attribute_value').length > 0 ) {
             if ( $('#late_payment_claim_action_set_field_attribute_value').get(0).tagName == "INPUT" ) {
@@ -2787,7 +2791,7 @@
         var day = $('#general_settings_form input[name="execution_month_days"]').val();
         var month = $('#general_settings_form input[name="execution_monthes"]').val();
         var weekdays = $('#general_settings_form input[name="execution_weekdays"]').val();
-        var executionOnClosingDays = $('#general_settings_form input[name="execution_on_closing_days"]').val();
+        var executionOnClosingDays = $('#general_settings_form input[name="execution_on_closing_days"]:checked').val();
         var executionOnClosingDaysLibrary = $('#general_settings_form select[name="execution_on_closing_days_library"]').val();
         
         let options = {

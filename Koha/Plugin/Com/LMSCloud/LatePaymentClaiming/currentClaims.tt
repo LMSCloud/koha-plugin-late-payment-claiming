@@ -7,7 +7,7 @@
 [% USE JSON.Escape %]
 [% USE Koha %]
 [% SET footerjs = 1 %]
-[% SET libraries = Branches.all %]
+[% SET libraries = Branches.all( unfiltered => 1 ) %]
 [% SET categories = Categories.all.unblessed %]
 
 [% PROCESS 'patron-search.inc' %]
@@ -413,7 +413,7 @@
                             data: 'library_id',
                             width: "10%",
                             render: function( data, type, row, meta ) {
-                                let library_name = libraries_map[data].branchname
+                                let library_name = (libraries_map[data] || { branchname: data }).branchname
                                 if( !singleBranchMode && data == logged_in_library_id ) {
                                     return "<span class=\"currentlibrary\">" + escape_str(library_name) + "</span>";
                                 } else {
@@ -426,7 +426,7 @@
                             data: 'category_id',
                             width: "10%",
                             render: function( data, type, row, meta ) {
-                                return escape_str(categories_map[data.toLowerCase()].description);
+                                return escape_str((categories_map[data.toLowerCase()] || { description: data }).description);
                             }
                         },
                         {

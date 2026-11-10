@@ -56,7 +56,7 @@ paths:
                 type: string
       x-koha-authorization:
         permissions:
-          plugins: plugins_configure
+          plugins: configure
   /configuration/{library_id}/{category_id}:
     get:
       x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfigurationController#getConfiguration
@@ -174,7 +174,7 @@ paths:
                 type: string
       x-koha-authorization:
         permissions:
-          plugins: plugins_configure
+          plugins: configure
     delete:
       x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfigurationController#removeConfiguration
       summary: remove all settings of a configuration
@@ -218,7 +218,7 @@ paths:
                 type: string
       x-koha-authorization:
         permissions:
-          plugins: plugins_configure
+          plugins: configure
     post:
       x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingConfigurationController#saveConfiguration
       summary: save all settings of a configuration
@@ -422,7 +422,7 @@ paths:
                 type: string
       x-koha-authorization:
         permissions:
-          plugins: plugins_configure
+          plugins: configure
 
   /patrons/list:
    post:
@@ -946,8 +946,7 @@ paths:
                 type: string
       x-koha-authorization:
         permissions:
-          - plugins: plugins_configure
-          - borrowers: "edit_borrowers"
+          plugins: configure
 
   /late_payment_claims:
     get:
@@ -1228,10 +1227,17 @@ paths:
             properties:
               detail:
                 type: string
+        "403":
+          description: Without the permission to use the plugin tools only the claims of a patron can be requested
+          schema:
+            properties:
+              detail:
+                type: string
       x-koha-authorization:
         permissions:
-          - plugins: "plugins_tool"
-          - borrowers: "edit_borrowers"
+          - plugins: tool
+          - borrowers: edit_borrowers
+          - circulate: circulate_remaining_permissions
 
   /late_payment_claim/{claim_id}/comment:
     get:
@@ -1263,6 +1269,12 @@ paths:
             properties:
               detail:
                 type: string
+        "404":
+          description: Late payment claim not found
+          schema:
+            properties:
+              detail:
+                type: string
         "401":
           description: Invalid API key
           schema:
@@ -1271,7 +1283,7 @@ paths:
                 type: string
       x-koha-authorization:
         permissions:
-          plugins: plugins_tool
+          plugins: tool
   /late_payment_claim/{claim_id}:
     post:
       x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingController#updateLatePaymentClaimComment
@@ -1473,6 +1485,12 @@ paths:
             properties:
               detail:
                 type: string
+        "404":
+          description: Late payment claim not found
+          schema:
+            properties:
+              detail:
+                type: string
         "401":
           description: Invalid API key
           schema:
@@ -1481,7 +1499,7 @@ paths:
                 type: string
       x-koha-authorization:
         permissions:
-          plugins: plugins_tool
+          plugins: tool
   /late_payment_claim:
     post:
       x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingController#insertLatePaymentClaim
@@ -1680,7 +1698,7 @@ paths:
                 type: string
       x-koha-authorization:
         permissions:
-          plugins: plugins_tool
+          plugins: tool
   /late_payment_claim_history:
     get:
       x-mojo-to: Com::LMSCloud::LatePaymentClaiming::LatePaymentClaimingController#getLatePaymentClaimHistory
@@ -1923,11 +1941,6 @@ paths:
                         - string
                         - "null"
                       description: Tiemstamp of the late payment claim history entry
-                    action_timestamp:
-                      type:  
-                        - string
-                        - "null"
-                      description: Tiemstamp of the late payment claim history entry
                     manager_patron_id:
                       type:
                         - integer
@@ -1943,16 +1956,6 @@ paths:
                         - string
                         - "null"
                       description: manager's last name
-                    manager_firstname:
-                      type:
-                        - string
-                        - "null"
-                      description: manager's first name
-                    manager_firstname:
-                      type:
-                        - string
-                        - "null"
-                      description: manager's first name
                     manager_firstname:
                       type:
                         - string
@@ -1992,7 +1995,7 @@ paths:
                 type: string
       x-koha-authorization:
         permissions:
-          plugins: plugins_tool
+          plugins: tool
 
   /check_execution_frequency:
     get:
@@ -2068,7 +2071,7 @@ paths:
                 type: string
       x-koha-authorization:
         permissions:
-          plugins: plugins_tool
+          plugins: configure
 
   /get_next_execution_days:
     get:
@@ -2137,4 +2140,4 @@ paths:
                 type: string
       x-koha-authorization:
         permissions:
-          plugins: plugins_tool
+          plugins: configure

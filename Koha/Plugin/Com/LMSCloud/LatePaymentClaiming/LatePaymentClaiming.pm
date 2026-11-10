@@ -158,6 +158,10 @@ sub claimPatronsOfAllConfigurations {
     
     foreach my $patron_id(sort { $claimPatrons->{$a}->{level} <=> $claimPatrons->{$b}->{level} } keys %$claimPatrons) {
         my $claimPatron = $claimPatrons->{$patron_id};
+        
+        # An error for one patron (e.g. a wrong action configuration) is logged and the
+        # remaining patrons are still claimed instead of aborting the whole run.
+        eval {
 
         if ( $claimPatron->{claim_id} ) {
             $dbh->do("UPDATE lmsc_late_payment_claim SET branchcode = ?, categorycode = ?, level = ? WHERE id = ?",
@@ -205,6 +209,11 @@ sub claimPatronsOfAllConfigurations {
                     $claim_action_id);
         
         push @$IdList, $claim_action_id;
+        
+        };
+        if ( $@ ) {
+            carp "Error claiming patron $patron_id: $@";
+        }
     }
     
     return $IdList;
@@ -360,8 +369,9 @@ sub getLatePaymentClaims {
         }
     }
     
-    if ( $page_count ) {
+    if ( $page_count && $page_count > 0 ) {
         $sqlfetch .= " LIMIT ";
+        $page = 1 if ( !$page || $page < 1 );
         $sqlfetch .= (($page-1) * $page_count) . ',';
         $sqlfetch .= $page_count;
     }
@@ -420,7 +430,7 @@ sub insertLatePaymentClaim {
                     $patron->categorycode,
                     $level,
                     'open',
-                    $comment);
+                    $comment // '');
     my $claim_id = $dbh->{mysql_insertid};
 
     my $userenv = C4::Context->userenv();
@@ -456,12 +466,28 @@ sub updateLatePaymentClaim {
     my $dbh = C4::Context->dbh;
     
     my ($previousState) = $dbh->selectrow_array("SELECT state FROM lmsc_late_payment_claim WHERE id = ?",undef,$claim_id);
+    return { error => 'notFound' } if ( !defined($previousState) );
     
     my @fields;
     my @data;
     
     my $scrubber = C4::Scrubber->new();
     my $action = $scrubber->scrub($claim->{action});
+    
+    # The action decides which status the claim gets, so a status that does not belong to
+    # the action is refused (e.g. "comment" together with the status "closed").
+    return { error => 'invalidAction' } if ( !$action || $action !~ /^(comment|open|pause|close|reopen)$/ );
+    my %statusOfAction = ( open => 'open', reopen => 'open', pause => 'paused', close => 'closed' );
+    my $givenStatus = $claim->{status};
+    if ( $action eq 'comment' ) {
+        # a comment does not change the status
+        return { error => 'statusMismatch' } if ( defined($givenStatus) && length($givenStatus) && $givenStatus ne $previousState );
+        delete $claim->{status};
+    }
+    else {
+        return { error => 'statusMismatch' } if ( defined($givenStatus) && length($givenStatus) && $givenStatus ne $statusOfAction{$action} );
+        $claim->{status} = $statusOfAction{$action};
+    }
     my $comment;
     
     foreach my $field(keys %$claim) {
@@ -573,7 +599,7 @@ sub getLatePaymentClaimHistory {
     }
     if ( $parameters->{patron_id} ) {
         push @where, "b.borrowernumber = ?";
-        push @params, $parameters->{borrowernumber};
+        push @params, $parameters->{patron_id};
     }
     if ( $parameters->{patron} || $parameters->{surname} ) {
         my $sPatron = '%' . $parameters->{patron} . '%';
@@ -651,10 +677,28 @@ sub getLatePaymentClaimHistory {
             push @params, @addParams;
         }
     }
-    if ( $searchAll ) {
+    if ( defined($searchAll) && length($searchAll) > 0 ) {
         my $searchAllTrunc = '%' . $searchAll . '%';
-        push @where, "(lpc.id = ? OR b.cardnumber LIKE ? OR b.borrowernumber = ? OR b.surname LIKE ? OR b.firstname LIKE ? OR b.middle_name LIKE ? OR b.title LIKE ? OR b.othernames LIKE ? OR b.branchcode = ? OR br.branchname LIKE ? OR b.categorycode = ? OR cat.description LIKE ? OR lpc.creationdate = ? OR lpc.level = ? OR lpc.state = ? OR hist.action = ? OR hist.comment LIKE ? OR hist.timestamp = ?)";
-        push @params, $searchAll,    $searchAllTrunc,       $searchAll,             $searchAllTrunc,    $searchAllTrunc,      $searchAllTrunc,        $searchAllTrunc,  $searchAllTrunc,       $searchAll,         $searchAllTrunc,        $searchAll,           $searchAllTrunc,          $searchAll,             $searchAll,      $searchAll,      $searchAll,        $searchAllTrunc,       $searchAll;
+        my @searchWhere = (
+            "b.cardnumber LIKE ?", "b.surname LIKE ?", "b.firstname LIKE ?", "b.middle_name LIKE ?", "b.title LIKE ?",
+            "b.othernames LIKE ?", "br.branchname LIKE ?", "cat.description LIKE ?", "hist.comment LIKE ?"
+        );
+        my @searchParams = ($searchAllTrunc) x scalar(@searchWhere);
+        foreach my $exact ( ['b.branchcode = ?'], ['b.categorycode = ?'], ['lpc.state = ?'], ['hist.action = ?'] ) {
+            push @searchWhere, $exact->[0];
+            push @searchParams, $searchAll;
+        }
+        if ( $searchAll =~ /^\s*([0-9]+)\s*$/ ) {
+            # numbers are compared as numbers only if the whole search text is a number
+            push @searchWhere, "lpc.id = ?", "b.borrowernumber = ?", "lpc.level = ?";
+            push @searchParams, $1, $1, $1;
+        }
+        if ( $searchAll =~ /^\s*([0-9]{4}-[0-9]{2}-[0-9]{2})\s*$/ ) {
+            push @searchWhere, "lpc.creationdate = ?", "DATE(hist.timestamp) = ?";
+            push @searchParams, $1, $1;
+        }
+        push @where, "(" . join(" OR ", @searchWhere) . ")";
+        push @params, @searchParams;
     }
     
     my $sqlcount = q{
@@ -735,8 +779,9 @@ sub getLatePaymentClaimHistory {
         }
     }
     
-    if ( $page_count ) {
+    if ( $page_count && $page_count > 0 ) {
         $sqlfetch .= " LIMIT ";
+        $page = 1 if ( !$page || $page < 1 );
         $sqlfetch .= (($page-1) * $page_count) . ',';
         $sqlfetch .= $page_count;
     }

@@ -7,7 +7,7 @@
 [% USE JSON.Escape %]
 [% USE Koha %]
 [% SET footerjs = 1 %]
-[% SET libraries = Branches.all %]
+[% SET libraries = Branches.all( unfiltered => 1 ) %]
 [% SET categories = Categories.all.unblessed %]
 
 [% PROCESS 'patron-search.inc' %]
@@ -164,7 +164,7 @@
                 </div>
             </div> <!-- /.modal-body -->
             <div class="modal-footer">
-                <form id="show_selections_actions">
+                <form id="show_banactions_actions">
                     <button type="button" class="btn btn-default deny" data-dismiss="modal" data-bs-dismiss="modal">Abbrechen</button>
                 </form>
             </div> <!-- /.modal-footer -->
@@ -235,7 +235,7 @@
                             data: 'library_id',
                             sWidth: "10%",
                             render: function( data, type, row, meta ) {
-                                let library_name = libraries_map[data].branchname
+                                let library_name = (libraries_map[data] || { branchname: data }).branchname
                                 if( !singleBranchMode && data == logged_in_library_id ) {
                                     return "<span class=\"currentlibrary\">" + escape_str(library_name) + "</span>";
                                 } else {
@@ -248,7 +248,7 @@
                             data: 'category_id',
                             sWidth: "10%",
                             render: function( data, type, row, meta ) {
-                                return escape_str(categories_map[data.toLowerCase()].description);
+                                return escape_str((categories_map[data.toLowerCase()] || { description: data }).description);
                             }
                         },
                         { 
@@ -261,7 +261,7 @@
                                     case "claimed":   actionName = row.level + ". Mahnung"; break;
                                     case "comment": actionName = "Kommen&shy;tiert"; break;
                                     case "pause":   actionName = "Pau&shy;siert"; break;
-                                    case "close":   actionName = "Abge&shy;chlos&shy;sen"; break;
+                                    case "close":   actionName = "Abge&shy;schlos&shy;sen"; break;
                                     case "reopen":  actionName = "Reakti&shy;viert"; break;
                                     case "paid":    actionName = "Gebühr beglichen"; break;
                                     case "added":    actionName = "Mahnfall erfasst"; break;
@@ -383,7 +383,7 @@
                         } );
                     },
                     "ajax": function(data, callback, settings) {
-                        var fieldMap = { library_id: 'library', category_id: 'category' };
+                        var fieldMap = { library_id: 'library', category_id: 'category', surname: 'patron' };
                         var params = lmscPaging(data);
                         data.columns.forEach(function(column) {
                             if ( !column.search || !column.search.value ) return;

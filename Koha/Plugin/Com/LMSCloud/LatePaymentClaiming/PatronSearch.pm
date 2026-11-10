@@ -22,6 +22,7 @@ use utf8;
 
 use Data::Dumper;
 use JSON;
+use Koha::Database;
 use Koha::Patrons;
 
 sub new {
@@ -71,6 +72,15 @@ sub search {
     return Koha::Patrons->search($params);
     
     # print "Found ",$patrons->count," patrons\n";
+}
+
+sub patronColumns {
+    my $self = shift;
+    
+    if ( !$self->{patronColumns} ) {
+        $self->{patronColumns} = { map { $_ => 1 } Koha::Database->new()->schema()->resultset('Borrower')->result_source->columns };
+    }
+    return $self->{patronColumns};
 }
 
 sub buildSearchParams {
@@ -141,14 +151,26 @@ sub buildSearchParams {
                     $value = '%' . $value . '%';
                 }
                 
+                my $patronColumns = $self->patronColumns();
+                my $invalidField = 0;
                 foreach my $field(split(/,/,$selection->{search_fieldset})) {
                     $field =~ s/(^\s+|\s+$)//g;
+                    # the field name becomes part of the SQL, so only accept real patron columns
+                    if ( $field !~ /^[a-z_0-9]+$/i || !$patronColumns->{$field} ) {
+                        $invalidField = 1;
+                        next;
+                    }
                     $q .= ' OR ' if ( $q ne '');
                     $q .= 'me.' . $field . ' LIKE ?';
                     push @params, $value;
                 }
                 
-                if ( $selection->{negate} && JSON->boolean($selection->{negate}) eq JSON::true )  {
+                if ( $invalidField || $q eq '' ) {
+                    # an unusable selection must not select anybody, not even when negated
+                    $q = '0 = 1';
+                    @params = ();
+                }
+                elsif ( $selection->{negate} && JSON->boolean($selection->{negate}) eq JSON::true )  {
                     $q = 'NOT (' . $q . ')';
                 }
                 else {
@@ -294,14 +316,6 @@ sub buildSearchParams {
             if ( $selection->{search_field} eq 'last_letter_code' && $selection->{search_value} ) {
                 my $q = "EXISTS (SELECT 1 FROM message_queue m WHERE m.borrowernumber = me.borrowernumber AND m.letter_code = ? and m.time_queued = (SELECT MAX(time_queued) FROM message_queue mq WHERE mq.borrowernumber = me.borrowernumber and status = ?))";
                 my @params = ($selection->{search_value},'sent');
-                if ( $selection->{negate} && JSON->boolean($selection->{negate}) eq JSON::true )  {
-                    $q = 'NOT ' . $q;
-                }
-                push @{$query->{'-and'}}, \[ $q, @params ];
-            }
-            if ( $selection->{search_field} eq 'overdue_level' && $selection->{search_value} ) {
-                my $q = "EXISTS (SELECT 1 FROM issues i WHERE i.borrowernumber = me.borrowernumber AND ? IN (SELECT max(claim_level) FROM overdue_issues o WHERE i.issue_id = o.issue_id GROUP BY o.issue_id))";
-                my @params = ($selection->{search_value});
                 if ( $selection->{negate} && JSON->boolean($selection->{negate}) eq JSON::true )  {
                     $q = 'NOT ' . $q;
                 }

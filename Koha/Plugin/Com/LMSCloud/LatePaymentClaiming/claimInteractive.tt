@@ -78,8 +78,8 @@
                         [% END %]
                     </p>
                     <form method="post" id="start_claiming_action">
-                        <input type="hidden" name="class" value="[% CLASS %]"/>
-                        <input type="hidden" name="method" value="[% METHOD %]"/>
+                        <input type="hidden" name="class" value="[% CLASS | html %]"/>
+                        <input type="hidden" name="method" value="[% METHOD | html %]"/>
                         [%# Koha's CSRF middleware rejects any POST without a token; the include is missing before 24.05 %]
                         [% TRY %][% PROCESS 'csrf-token.inc' %][% CATCH %][% END %]
                         <input type="hidden" name="do" value="start"/>
@@ -216,7 +216,7 @@
                 </div>
             </div> <!-- /.modal-body -->
             <div class="modal-footer">
-                <form id="show_selections_actions">
+                <form id="show_banactions_actions">
                     <button type="button" class="btn btn-default deny" data-dismiss="modal" data-bs-dismiss="modal">Abbrechen</button>
                 </form>
             </div> <!-- /.modal-footer -->

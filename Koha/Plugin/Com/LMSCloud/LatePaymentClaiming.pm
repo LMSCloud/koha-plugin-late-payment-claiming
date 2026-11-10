@@ -69,7 +69,7 @@ sub configure {
     my ( $self, $args ) = @_;
     my $cgi = $self->{'cgi'};
     
-    if ( $cgi->param('save_general')  ) {
+    if ( $cgi->request_method eq 'POST' && $cgi->param('save_general')  ) {
         $self->store_data(
             {
                 batch_active                      => scalar $cgi->param('batch_active'),
@@ -197,7 +197,7 @@ sub configure {
         execution_on_closing_days         => $self->retrieve_data('execution_on_closing_days') || 'yes',
         execution_on_closing_days_library => $self->retrieve_data('execution_on_closing_days_library'),
         account_balance_for_closing       => $self->retrieve_data('account_balance_for_closing') || '0.0',
-        unban_actions                     => $self->retrieve_data('unban_actions') || '[]',
+        unban_actions                     => $self->scriptSafeJSON( $self->retrieve_data('unban_actions') || '[]' ),
         do_automatic_close_on_payment     => $self->retrieve_data('do_automatic_close_on_payment') + 0, 
         configurations                    => $config->getConfigurationList()
     );
@@ -206,6 +206,19 @@ sub configure {
     
     $self->output_html( $template->output() );
     exit;
+}
+
+# The stored JSON is printed into a <script> element of the configuration page. These characters
+# only occur inside JSON strings, where the \u escapes mean the same, so nothing can end the script.
+sub scriptSafeJSON {
+    my ( $self, $json ) = @_;
+    
+    $json =~ s/</\\u003c/g;
+    $json =~ s/>/\\u003e/g;
+    $json =~ s/&/\\u0026/g;
+    $json =~ s/\x{2028}/\\u2028/g;
+    $json =~ s/\x{2029}/\\u2029/g;
+    return $json;
 }
 
 sub cronjob_nightly {
@@ -228,7 +241,8 @@ sub cronjob_nightly {
     my $startdate = $cron->getDefaultStartDate($execution_on_closing_days,$execution_on_closing_days_library);
     my $lastrun = $self->retrieve_data('last_run');
     if ( $lastrun ) {
-        $startdate = dt_from_string($lastrun);
+        my $lastrunDate = eval { dt_from_string($lastrun) };
+        $startdate = $lastrunDate if ( $lastrunDate );
     }
     
     my $result = $cron->getNextDay(  
@@ -252,7 +266,7 @@ sub intranet_js {
     
     my $user_id = C4::Context->userenv ? C4::Context->userenv->{'id'} : undef;
     my $canViewClaims = 0;
-    if ( $user_id && haspermission($user_id, { plugins => 'plugins_tool' }) ) {
+    if ( $user_id && haspermission($user_id, { plugins => 'tool' }) ) {
         $canViewClaims = 1;
     }
     
@@ -421,7 +435,7 @@ sub claimInteractive {
     
     $template->param( countClaimsLimit => $countClaimsLimit );
     
-    if ( $start eq 'start' ) {
+    if ( $start eq 'start' && $cgi->request_method eq 'POST' ) {
         # the claims selected in the list, at most $countClaimsLimit
         my @patronIds = grep { /^[0-9]+$/ } map { s/^\s+|\s+$//gr } split( /,/, scalar($cgi->param('patron_ids')) || '' );
         

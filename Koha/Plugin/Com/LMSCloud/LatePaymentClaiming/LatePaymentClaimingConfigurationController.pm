@@ -76,6 +76,7 @@ sub saveConfiguration {
         if ( my $saved_config = $config->saveConfiguration($library_id,$category_id,$body) ) {
             return $c->render(status  => 200, openapi => $saved_config );
         }
+        return $c->render(status  => 400, openapi => { detail => "Invalid configuration: the mahnstufen must be numbered without gaps starting with 0." } );
     }
     catch {
         $c->unhandled_exception($_);

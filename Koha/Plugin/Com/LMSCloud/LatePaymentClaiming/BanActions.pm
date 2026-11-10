@@ -33,7 +33,7 @@ use Koha::Patron::Attribute::Types;
 use Koha::Patron::Categories;
 use Koha::Libraries;
 use Koha::DateUtils qw(dt_from_string output_pref);
-use Koha::List::Patron qw(GetPatronLists AddPatronsToList DelPatronsFromList);
+use Koha::List::Patron qw(GetPatronLists AddPatronsToList);
 use Koha::Patron::Debarments qw(DelDebarment AddDebarment);
 
 use C4::Koha qw( GetAuthorisedValues );
@@ -48,8 +48,8 @@ sub new {
     bless $self, $class;
 
     my $template = Template->new(
-        {   EVAL_PERL    => 1,
-            ABSOLUTE     => 1,
+        {   EVAL_PERL    => 0,
+            ABSOLUTE     => 0,
             PLUGIN_BASE  => 'Koha::Template::Plugin',
             ENCODING     => 'UTF-8',
         }
@@ -341,6 +341,9 @@ sub deleteDebarementAction {
             DelDebarment( $debarement->borrower_debarment_id );
         }
     }
+    
+    # only the deletion of restrictions of the claim case reports a result
+    return '';
 }
 
 =head2 claimedHistory
@@ -456,7 +459,7 @@ sub patronListAction {
             AddPatronsToList( { list => $patronList, borrowernumbers => [ $patron->borrowernumber ] } );
         }
         if ( $del ) {
-            DelPatronsFromList( { list => $patronList, patron_list_patrons => [ $patron->borrowernumber ] } );
+            # DelPatronsFromList expects the ids of the list entries, not borrowernumbers, so delete the entry directly
             $schema->resultset('PatronListPatron')->search( { patron_list_id => $listID, borrowernumber => $patron->borrowernumber } )->delete();
         }
     }
@@ -789,11 +792,10 @@ sub formatAsTemplate {
     my $data;
     binmode( STDOUT,":encoding(UTF-8)");
     
-    eval {
-        $self->{template}->process( \$text, $templateVars, \$data );
-    };
-    if ( @_ ) {
-        carp "Error while processing template string $text with variables ". Dumper($templateVars);
+    # process() returns false on template errors instead of dying
+    my $ok = eval { $self->{template}->process( \$text, $templateVars, \$data ) };
+    if ( !$ok || !defined($data) ) {
+        carp "Error while processing template string '$text': " . ( $@ || $self->{template}->error() || 'unknown error' );
         return $text;
     }
     return $data;
