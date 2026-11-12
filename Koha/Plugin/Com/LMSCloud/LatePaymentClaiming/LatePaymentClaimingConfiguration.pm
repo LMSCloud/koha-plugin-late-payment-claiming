@@ -25,6 +25,7 @@ use C4::Scrubber;
 use JSON;
 
 use Koha::Libraries;
+use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::Compat;
 use Koha::Patron::Categories;
 
 sub new {
@@ -62,7 +63,7 @@ sub getConfigurationList {
     }
     
     my $branchcodes = {};
-    foreach my $library( Koha::Libraries->search_filtered({ -or => [ mobilebranch => undef, mobilebranch => '' ] }, { order_by => 'branchname' })->as_list ) {
+    foreach my $library( Koha::Libraries->search_filtered(Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::Compat->notMobileLibraries(), { order_by => 'branchname' })->as_list ) {
         $branchcodes->{$library->branchcode} = $library->branchname;
     }
     my $categories = {};

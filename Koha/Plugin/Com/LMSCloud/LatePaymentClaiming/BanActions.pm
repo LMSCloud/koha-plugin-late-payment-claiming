@@ -40,6 +40,7 @@ use C4::Koha qw( GetAuthorisedValues );
 use C4::Context;
 
 use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::NoteText;
+use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::Compat;
 
 sub new {
     my ( $class ) = @_;
@@ -155,7 +156,8 @@ sub sendLetterAction {
                                 user_id     => C4::Context->userenv ? C4::Context->userenv->{'number'} : undef,
                                 interface   => C4::Context->interface,
                                 library_id  => $library->branchcode,
-                                type        => 'NOTIFICATION'
+                                # the debit type NOTIFICATION exists only in the LMSCloud Koha
+                                type        => Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::Compat->hasDebitType('NOTIFICATION') ? 'NOTIFICATION' : 'LATE_PAYMENT_CLAIM'
                             };
             try {
                 my $accountline = $patron->account->add_debit($debitData);

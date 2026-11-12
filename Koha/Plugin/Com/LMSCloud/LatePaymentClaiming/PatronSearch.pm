@@ -23,6 +23,7 @@ use utf8;
 use Data::Dumper;
 use JSON;
 use Koha::Database;
+use Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::Compat;
 use Koha::Patrons;
 
 sub new {
@@ -321,7 +322,11 @@ sub buildSearchParams {
                 }
                 push @{$query->{'-and'}}, \[ $q, @params ];
             }
-            if ( $selection->{search_field} eq 'overdue_level' && $selection->{search_value} ) {
+            if ( $selection->{search_field} eq 'overdue_level' && $selection->{search_value} && !Koha::Plugin::Com::LMSCloud::LatePaymentClaiming::Compat->hasTable('overdue_issues') ) {
+                # the overdue levels are an addition of the LMSCloud Koha; without them nobody is selected
+                push @{$query->{'-and'}}, \[ '0 = 1' ];
+            }
+            elsif ( $selection->{search_field} eq 'overdue_level' && $selection->{search_value} ) {
                 if ( $selection->{search_value} eq 'any' ) {
                     my $q = "EXISTS (SELECT 1 FROM issues i WHERE i.borrowernumber = me.borrowernumber AND EXISTS(SELECT 1 FROM overdue_issues o WHERE i.issue_id = o.issue_id GROUP BY o.issue_id))";
                     if ( $selection->{negate} && JSON->boolean($selection->{negate}) eq JSON::true )  {

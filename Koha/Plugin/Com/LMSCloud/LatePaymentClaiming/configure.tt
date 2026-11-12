@@ -6,7 +6,6 @@
 [% USE Branches %]
 [% USE JSON.Escape %]
 [% USE Koha %]
-[% USE Letters %]
 [% SET footerjs = 1 %]
 [% SET libraries = Branches.all( unfiltered => 1 ) %]
 [% SET categories = Categories.all.unblessed %]
@@ -973,11 +972,10 @@
                                         </label>
                                    </li>
                                    <li>
-                                       [% SET letters = Letters.all() %]
                                        <label for="latepayment_search_lastlettercode_filter">Letzte Benachrichtigung: </label>
                                        <select id="latepayment_search_lastlettercode_filter">
                                            <option value="">Keine Auswahl</option>
-                                           [% FOREACH l IN letters %]
+                                           [% FOREACH l IN allPatronLetters %]
                                            <option value="[% l.code | html %]">[% l.name | html %]</option>
                                            [% END %]
                                         </select>
@@ -986,7 +984,7 @@
                                             Nicht
                                         </label>
                                     </li>
-                                    <li>
+                                    <li[% UNLESS hasOverdueIssues %] style="display:none"[% END %]>
                                         <label for="latepayment_search_overduelevel_filter">Ausleihe mit Mahnstufe: </label>
                                         <select id="latepayment_search_overduelevel_filter">
                                             <option value="">Keine Auswahl</option>
